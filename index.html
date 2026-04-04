@@ -267,14 +267,22 @@ async function generarPDF() {
 }
 
 // REGISTRAR SERVICE WORKER (CLAVE PARA INSTALAR APP)
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js")
-    .then(() => console.log("Service Worker activo"))
-    .catch(err => console.log("Error SW:", err));
-}
 
-// INIT
-cargar();
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js")
+      .then(reg => {
+        console.log("SW registrado");
+
+        // FORZAR DETECCIÓN DE INSTALACIÓN
+        window.addEventListener("beforeinstallprompt", (e) => {
+          console.log("Instalable detectado");
+        });
+
+      })
+      .catch(err => console.log("Error SW:", err));
+  });
+}
 </script>
 
 </body>
