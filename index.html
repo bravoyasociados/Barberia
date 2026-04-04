@@ -5,14 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>King's Barber</title>
 
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#000000">
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
-<!-- PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
@@ -29,9 +21,7 @@ header {
   font-size: 22px;
   font-weight: bold;
 }
-.container {
-  padding: 15px;
-}
+.container { padding: 15px; }
 input {
   width: 100%;
   padding: 12px;
@@ -52,7 +42,6 @@ input {
   text-align: center;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: 0.2s;
 }
 .service-btn.active {
   border: 2px solid #00c853;
@@ -122,27 +111,11 @@ button {
 </div>
 
 <script>
-// FIREBASE CONFIG
-const firebaseConfig = {
-  apiKey: "AIzaSyCSF7dc0cy3B-hSaFTYAwU-gNc0o12JTG0",
-  authDomain: "barberia-pro-3ca72.firebaseapp.com",
-  projectId: "barberia-pro-3ca72",
-  storageBucket: "barberia-pro-3ca72.firebasestorage.app",
-  messagingSenderId: "367164635109",
-  appId: "1:367164635109:web:8403bb5f804fffe2c6210c"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-// VARIABLES
 let seleccionados = [];
 let totalAuto = 0;
 
-// TOGGLE SERVICIOS
+// TOGGLE
 function toggle(el, servicio, precio) {
-  console.log("Click:", servicio);
-
   el.classList.toggle("active");
 
   if (seleccionados.includes(servicio)) {
@@ -156,43 +129,36 @@ function toggle(el, servicio, precio) {
   document.getElementById("monto").value = totalAuto;
 }
 
-// GUARDAR
-async function guardar() {
+// GUARDAR LOCAL
+function guardar() {
   let cliente = document.getElementById("cliente").value.trim();
   let monto = parseFloat(document.getElementById("monto").value);
-
-  console.log("Datos:", cliente, seleccionados, monto);
 
   if (!cliente || seleccionados.length === 0 || isNaN(monto)) {
     alert("Completa todos los datos");
     return;
   }
 
-  try {
-    let ahora = new Date();
+  let registros = JSON.parse(localStorage.getItem("cortes")) || [];
 
-    await db.collection("cortes").add({
-      cliente,
-      servicios: [...seleccionados],
-      monto: monto,
-      fecha: ahora.toISOString()
-    });
+  registros.push({
+    cliente,
+    servicios: [...seleccionados],
+    monto,
+    fecha: new Date().toISOString()
+  });
 
-    alert("✅ Guardado correctamente");
+  localStorage.setItem("cortes", JSON.stringify(registros));
 
-    // RESET
-    document.getElementById("cliente").value = "";
-    document.getElementById("monto").value = "";
-    seleccionados = [];
-    totalAuto = 0;
+  document.getElementById("cliente").value = "";
+  document.getElementById("monto").value = "";
+  seleccionados = [];
+  totalAuto = 0;
 
-    document.querySelectorAll(".service-btn")
-      .forEach(btn => btn.classList.remove("active"));
+  document.querySelectorAll(".service-btn")
+    .forEach(btn => btn.classList.remove("active"));
 
-  } catch (error) {
-    console.error("Error:", error);
-    alert("❌ Error al guardar");
-  }
+  cargar();
 }
 
 // UTILIDADES
@@ -207,9 +173,9 @@ function mismaSemana(f1, f2) {
   return w1 === w2 && f1.getFullYear() === f2.getFullYear();
 }
 
-// TIEMPO REAL
-db.collection("cortes").orderBy("fecha", "desc")
-.onSnapshot(snapshot => {
+// CARGAR HISTORIAL
+function cargar() {
+  let registros = JSON.parse(localStorage.getItem("cortes")) || [];
 
   let hoy = new Date();
   let totalHoy = 0;
@@ -218,8 +184,7 @@ db.collection("cortes").orderBy("fecha", "desc")
   let cont = document.getElementById("historial");
   cont.innerHTML = "";
 
-  snapshot.forEach(doc => {
-    let r = doc.data();
+  registros.reverse().forEach(r => {
     let fecha = new Date(r.fecha);
 
     if (mismoDia(fecha, hoy)) totalHoy += r.monto;
@@ -239,11 +204,14 @@ db.collection("cortes").orderBy("fecha", "desc")
 
   document.getElementById("hoy").textContent = totalHoy;
   document.getElementById("semana").textContent = totalSemana;
-});
+}
 
-// PDF
+// PDF PRO
 async function generarPDF() {
   const { jsPDF } = window.jspdf;
+  let doc = new jsPDF();
+
+  let registros = JSON.parse(localStorage.getItem("cortes")) || [];
 
   let inicio = new Date(document.getElementById("fechaInicio").value);
   let fin = new Date(document.getElementById("fechaFin").value);
@@ -253,48 +221,62 @@ async function generarPDF() {
     return;
   }
 
-  let snapshot = await db.collection("cortes").get();
+  let filtrados = registros.filter(r => {
+    let f = new Date(r.fecha);
+    return f >= inicio && f <= fin;
+  });
 
-  let docPDF = new jsPDF();
-  let y = 10;
+  // LOGO
+  let img = new Image();
+  img.src = "logo.png";
+
+  await new Promise(resolve => {
+    img.onload = resolve;
+  });
+
+  doc.addImage(img, "PNG", 10, 10, 30, 30);
+
+  doc.setFontSize(18);
+  doc.text("King's Barber", 50, 20);
+
+  doc.setFontSize(12);
+  doc.text("Reporte de Servicios", 50, 28);
+
+  let y = 50;
   let total = 0;
 
-  docPDF.text("Reporte King's Barber", 10, y);
-  y += 10;
-
-  snapshot.forEach(doc => {
-    let r = doc.data();
+  filtrados.forEach(r => {
     let fecha = new Date(r.fecha);
 
-    if (fecha >= inicio && fecha <= fin) {
+    doc.setFontSize(10);
+    doc.text(`${fecha.toLocaleDateString()} - ${fecha.toLocaleTimeString()}`, 10, y);
+    y += 5;
 
-      let texto = `${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}
-${r.cliente}
-${r.servicios.join(", ")}
-$${r.monto}`;
+    doc.text(`Cliente: ${r.cliente}`, 10, y);
+    y += 5;
 
-      docPDF.text(texto, 10, y);
-      y += 20;
+    doc.text(`Servicios: ${r.servicios.join(", ")}`, 10, y);
+    y += 5;
 
-      total += r.monto;
+    doc.text(`Monto: $${r.monto}`, 10, y);
+    y += 10;
 
-      if (y > 270) {
-        docPDF.addPage();
-        y = 10;
-      }
+    total += r.monto;
+
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
     }
   });
 
-  y += 10;
-  docPDF.text(`TOTAL: $${total}`, 10, y);
+  doc.setFontSize(14);
+  doc.text(`TOTAL: $${total}`, 10, y + 10);
 
-  docPDF.save("reporte-barberia.pdf");
+  doc.save("reporte-barberia.pdf");
 }
 
-// PWA
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
-}
+// INIT
+cargar();
 </script>
 
 </body>
