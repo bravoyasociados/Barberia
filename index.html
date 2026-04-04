@@ -82,12 +82,10 @@ button {
 <input type="text" id="cliente" placeholder="Nombre del cliente">
 
 <div class="services">
-  <div class="service-btn" onclick="toggle(this,'Corte Clásico',100)">Corte Clásico</div>
-  <div class="service-btn" onclick="toggle(this,'Fade',120)">Fade</div>
-  <div class="service-btn" onclick="toggle(this,'Barba Premium',80)">Barba Premium</div>
-  <div class="service-btn" onclick="toggle(this,'Corte + Barba',170)">Corte + Barba</div>
-  <div class="service-btn" onclick="toggle(this,'Diseño',50)">Diseño</div>
-  <div class="service-btn" onclick="toggle(this,'Facial',90)">Facial</div>
+  <div class="service-btn" onclick="toggle(this,'Corte',100)">Corte</div>
+  <div class="service-btn" onclick="toggle(this,'Ceja y barba',20)">Ceja y barba</div>
+  <div class="service-btn" onclick="toggle(this,'Facial con corte',150)">Facial con corte</div>
+  <div class="service-btn" onclick="toggle(this,'Corte especial',150)">Corte especial</div>
 </div>
 
 <input type="number" id="monto" placeholder="Total">
@@ -129,7 +127,7 @@ function toggle(el, servicio, precio) {
   document.getElementById("monto").value = totalAuto;
 }
 
-// GUARDAR LOCAL
+// GUARDAR
 function guardar() {
   let cliente = document.getElementById("cliente").value.trim();
   let monto = parseFloat(document.getElementById("monto").value);
@@ -184,7 +182,7 @@ function cargar() {
   let cont = document.getElementById("historial");
   cont.innerHTML = "";
 
-  registros.reverse().forEach(r => {
+  registros.slice().reverse().forEach(r => {
     let fecha = new Date(r.fecha);
 
     if (mismoDia(fecha, hoy)) totalHoy += r.monto;
@@ -206,50 +204,55 @@ function cargar() {
   document.getElementById("semana").textContent = totalSemana;
 }
 
-// PDF PRO
+// PDF CORREGIDO
 async function generarPDF() {
   const { jsPDF } = window.jspdf;
   let doc = new jsPDF();
 
   let registros = JSON.parse(localStorage.getItem("cortes")) || [];
 
-  let inicio = new Date(document.getElementById("fechaInicio").value);
-  let fin = new Date(document.getElementById("fechaFin").value);
+  let inicio = document.getElementById("fechaInicio").value;
+  let fin = document.getElementById("fechaFin").value;
 
   if (!inicio || !fin) {
     alert("Selecciona fechas");
     return;
   }
 
+  inicio = new Date(inicio + "T00:00:00");
+  fin = new Date(fin + "T23:59:59");
+
   let filtrados = registros.filter(r => {
     let f = new Date(r.fecha);
     return f >= inicio && f <= fin;
   });
 
-  // LOGO
-  let img = new Image();
-  img.src = "logo.png";
+  let y = 20;
+  let total = 0;
 
-  await new Promise(resolve => {
-    img.onload = resolve;
-  });
-
-  doc.addImage(img, "PNG", 10, 10, 30, 30);
+  // LOGO (opcional)
+  try {
+    let img = new Image();
+    img.src = "logo.png";
+    await new Promise(res => { img.onload = res; img.onerror = res; });
+    doc.addImage(img, "PNG", 10, 5, 25, 25);
+  } catch(e) {}
 
   doc.setFontSize(18);
-  doc.text("King's Barber", 50, 20);
+  doc.text("King's Barber", 40, 15);
 
   doc.setFontSize(12);
-  doc.text("Reporte de Servicios", 50, 28);
+  doc.text("Reporte de Servicios", 40, 22);
 
-  let y = 50;
-  let total = 0;
+  doc.setFontSize(10);
+  doc.text(`Periodo: ${inicio.toLocaleDateString()} - ${fin.toLocaleDateString()}`, 10, 35);
+
+  y = 45;
 
   filtrados.forEach(r => {
     let fecha = new Date(r.fecha);
 
-    doc.setFontSize(10);
-    doc.text(`${fecha.toLocaleDateString()} - ${fecha.toLocaleTimeString()}`, 10, y);
+    doc.text(`${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}`, 10, y);
     y += 5;
 
     doc.text(`Cliente: ${r.cliente}`, 10, y);
