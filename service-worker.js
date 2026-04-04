@@ -1,4 +1,4 @@
-const CACHE_NAME = "barberia-pro-v1";
+const CACHE_NAME = "King's Barber-v1";
 
 const urlsToCache = [
   "./",
