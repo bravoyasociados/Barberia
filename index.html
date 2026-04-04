@@ -282,7 +282,12 @@ async function generarPDF() {
 
 // INIT
 cargar();
-</script>
 
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+    .then(() => console.log("SW activo"))
+    .catch(err => console.log("Error SW:", err));
+}
+</script>
 </body>
 </html>
