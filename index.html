@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#000000">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>King's Barber</title>
 
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
+
+<!-- PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
@@ -114,7 +117,6 @@ button {
 let seleccionados = [];
 let totalAuto = 0;
 
-// TOGGLE
 function toggle(el, servicio, precio) {
   el.classList.toggle("active");
 
@@ -129,7 +131,6 @@ function toggle(el, servicio, precio) {
   document.getElementById("monto").value = totalAuto;
 }
 
-// GUARDAR
 function guardar() {
   let cliente = document.getElementById("cliente").value.trim();
   let monto = parseFloat(document.getElementById("monto").value);
@@ -161,7 +162,6 @@ function guardar() {
   cargar();
 }
 
-// UTILIDADES
 function mismoDia(f1, f2) {
   return f1.toDateString() === f2.toDateString();
 }
@@ -173,7 +173,6 @@ function mismaSemana(f1, f2) {
   return w1 === w2 && f1.getFullYear() === f2.getFullYear();
 }
 
-// CARGAR HISTORIAL
 function cargar() {
   let registros = JSON.parse(localStorage.getItem("cortes")) || [];
 
@@ -206,7 +205,6 @@ function cargar() {
   document.getElementById("semana").textContent = totalSemana;
 }
 
-// PDF CORREGIDO
 async function generarPDF() {
   const { jsPDF } = window.jspdf;
   let doc = new jsPDF();
@@ -232,24 +230,13 @@ async function generarPDF() {
   let y = 20;
   let total = 0;
 
-  // LOGO (opcional)
-  try {
-    let img = new Image();
-    img.src = "logo.png";
-    await new Promise(res => { img.onload = res; img.onerror = res; });
-    doc.addImage(img, "PNG", 10, 5, 25, 25);
-  } catch(e) {}
-
   doc.setFontSize(18);
-  doc.text("King's Barber", 40, 15);
+  doc.text("King's Barber", 10, 15);
 
   doc.setFontSize(12);
-  doc.text("Reporte de Servicios", 40, 22);
+  doc.text("Reporte de Servicios", 10, 22);
 
-  doc.setFontSize(10);
-  doc.text(`Periodo: ${inicio.toLocaleDateString()} - ${fin.toLocaleDateString()}`, 10, 35);
-
-  y = 45;
+  y = 30;
 
   filtrados.forEach(r => {
     let fecha = new Date(r.fecha);
@@ -274,23 +261,21 @@ async function generarPDF() {
     }
   });
 
-  doc.setFontSize(14);
   doc.text(`TOTAL: $${total}`, 10, y + 10);
 
   doc.save("reporte-barberia.pdf");
 }
 
-// INIT
-cargar();
-
-</script>
-
-<script>
+// REGISTRAR SERVICE WORKER (CLAVE PARA INSTALAR APP)
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js")
-    .then(() => console.log("SW activo"))
+    .then(() => console.log("Service Worker activo"))
     .catch(err => console.log("Error SW:", err));
 }
+
+// INIT
+cargar();
 </script>
+
 </body>
 </html>
