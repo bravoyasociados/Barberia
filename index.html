@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#000000">
 
-<!-- Firebase (VERSIÓN COMPATIBLE) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
@@ -26,7 +26,7 @@ header {
   background: #000;
   padding: 15px;
   text-align: center;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: bold;
 }
 .container {
@@ -52,6 +52,7 @@ input {
   text-align: center;
   cursor: pointer;
   border: 2px solid transparent;
+  transition: 0.2s;
 }
 .service-btn.active {
   border: 2px solid #00c853;
@@ -92,10 +93,12 @@ button {
 <input type="text" id="cliente" placeholder="Nombre del cliente">
 
 <div class="services">
-  <div class="service-btn" onclick="toggle(this,'Corte',100)">Corte</div>
-  <div class="service-btn" onclick="toggle(this,'Barba',20)">Barba</div>
-  <div class="service-btn" onclick="toggle(this,'Ceja',20)">Ceja</div>
-  <div class="service-btn" onclick="toggle(this,'Facial',50)">Facial</div>
+  <div class="service-btn" onclick="toggle(this,'Corte Clásico',100)">Corte Clásico</div>
+  <div class="service-btn" onclick="toggle(this,'Fade',120)">Fade</div>
+  <div class="service-btn" onclick="toggle(this,'Barba Premium',80)">Barba Premium</div>
+  <div class="service-btn" onclick="toggle(this,'Corte + Barba',170)">Corte + Barba</div>
+  <div class="service-btn" onclick="toggle(this,'Diseño',50)">Diseño</div>
+  <div class="service-btn" onclick="toggle(this,'Facial',90)">Facial</div>
 </div>
 
 <input type="number" id="monto" placeholder="Total">
@@ -119,7 +122,7 @@ button {
 </div>
 
 <script>
-// 🔥 TU CONFIG YA INTEGRADA
+// FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyCSF7dc0cy3B-hSaFTYAwU-gNc0o12JTG0",
   authDomain: "barberia-pro-3ca72.firebaseapp.com",
@@ -136,8 +139,10 @@ const db = firebase.firestore();
 let seleccionados = [];
 let totalAuto = 0;
 
-// SERVICIOS
+// TOGGLE SERVICIOS
 function toggle(el, servicio, precio) {
+  console.log("Click:", servicio);
+
   el.classList.toggle("active");
 
   if (seleccionados.includes(servicio)) {
@@ -151,32 +156,43 @@ function toggle(el, servicio, precio) {
   document.getElementById("monto").value = totalAuto;
 }
 
-// GUARDAR EN FIREBASE
+// GUARDAR
 async function guardar() {
-  let cliente = document.getElementById("cliente").value;
-  let monto = document.getElementById("monto").value;
+  let cliente = document.getElementById("cliente").value.trim();
+  let monto = parseFloat(document.getElementById("monto").value);
 
-  if (!cliente || seleccionados.length === 0 || !monto) {
-    alert("Completa los datos");
+  console.log("Datos:", cliente, seleccionados, monto);
+
+  if (!cliente || seleccionados.length === 0 || isNaN(monto)) {
+    alert("Completa todos los datos");
     return;
   }
 
-  let ahora = new Date();
+  try {
+    let ahora = new Date();
 
-  await db.collection("cortes").add({
-    cliente,
-    servicios: [...seleccionados],
-    monto: parseFloat(monto),
-    fecha: ahora.toISOString()
-  });
+    await db.collection("cortes").add({
+      cliente,
+      servicios: [...seleccionados],
+      monto: monto,
+      fecha: ahora.toISOString()
+    });
 
-  document.getElementById("cliente").value = "";
-  document.getElementById("monto").value = "";
-  seleccionados = [];
-  totalAuto = 0;
+    alert("✅ Guardado correctamente");
 
-  document.querySelectorAll(".service-btn")
-    .forEach(btn => btn.classList.remove("active"));
+    // RESET
+    document.getElementById("cliente").value = "";
+    document.getElementById("monto").value = "";
+    seleccionados = [];
+    totalAuto = 0;
+
+    document.querySelectorAll(".service-btn")
+      .forEach(btn => btn.classList.remove("active"));
+
+  } catch (error) {
+    console.error("Error:", error);
+    alert("❌ Error al guardar");
+  }
 }
 
 // UTILIDADES
@@ -191,7 +207,7 @@ function mismaSemana(f1, f2) {
   return w1 === w2 && f1.getFullYear() === f2.getFullYear();
 }
 
-// 🔄 TIEMPO REAL
+// TIEMPO REAL
 db.collection("cortes").orderBy("fecha", "desc")
 .onSnapshot(snapshot => {
 
@@ -225,7 +241,7 @@ db.collection("cortes").orderBy("fecha", "desc")
   document.getElementById("semana").textContent = totalSemana;
 });
 
-// 📄 PDF
+// PDF
 async function generarPDF() {
   const { jsPDF } = window.jspdf;
 
@@ -239,39 +255,33 @@ async function generarPDF() {
 
   let snapshot = await db.collection("cortes").get();
 
-  let filtrados = [];
+  let docPDF = new jsPDF();
+  let y = 10;
+  let total = 0;
+
+  docPDF.text("Reporte King's Barber", 10, y);
+  y += 10;
+
   snapshot.forEach(doc => {
     let r = doc.data();
     let fecha = new Date(r.fecha);
 
     if (fecha >= inicio && fecha <= fin) {
-      filtrados.push(r);
-    }
-  });
 
-  let docPDF = new jsPDF();
-  let y = 10;
-  let total = 0;
-
-  docPDF.text("Reporte Barbería", 10, y);
-  y += 10;
-
-  filtrados.forEach(r => {
-    let fecha = new Date(r.fecha);
-
-    let texto = `${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}
+      let texto = `${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}
 ${r.cliente}
 ${r.servicios.join(", ")}
 $${r.monto}`;
 
-    docPDF.text(texto, 10, y);
-    y += 20;
+      docPDF.text(texto, 10, y);
+      y += 20;
 
-    total += r.monto;
+      total += r.monto;
 
-    if (y > 270) {
-      docPDF.addPage();
-      y = 10;
+      if (y > 270) {
+        docPDF.addPage();
+        y = 10;
+      }
     }
   });
 
