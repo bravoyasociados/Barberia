@@ -76,16 +76,17 @@ const db = firebase.firestore();
 let seleccionados = [];
 let totalAuto = 0;
 
-// 🔒 SOLO UN SERVICIO
+// ✅ MULTI SERVICIOS
 function toggle(el, servicio, precio) {
+  el.classList.toggle("active");
 
-  document.querySelectorAll(".service-btn")
-    .forEach(btn => btn.classList.remove("active"));
-
-  el.classList.add("active");
-
-  seleccionados = [servicio];
-  totalAuto = precio;
+  if (seleccionados.includes(servicio)) {
+    seleccionados = seleccionados.filter(s => s !== servicio);
+    totalAuto -= precio;
+  } else {
+    seleccionados.push(servicio);
+    totalAuto += precio;
+  }
 
   document.getElementById("monto").value = totalAuto;
 }
@@ -145,7 +146,7 @@ db.collection("cortes").orderBy("fecha")
       cont.innerHTML += `
         <div class="item">
           <b>${r.cliente}</b><br>
-          ${r.servicios.join(", ")}<br>
+          ${r.servicios.join(" + ")}<br>
           $${r.monto}<br>
           ${fecha.toLocaleTimeString()}
         </div>
@@ -160,13 +161,21 @@ db.collection("cortes").orderBy("fecha")
   document.getElementById("semana").textContent = totalSemana;
 });
 
-// 📄 PDF PROFESIONAL CON CORTE DIARIO
+// 📄 PDF PROFESIONAL
 async function generarPDF() {
   const { jsPDF } = window.jspdf;
   let doc = new jsPDF();
 
   let inicio = new Date(document.getElementById("fechaInicio").value);
   let fin = new Date(document.getElementById("fechaFin").value);
+
+  // 🔥 INCLUIR TODO EL DÍA FINAL
+  fin.setHours(23,59,59,999);
+
+  if (!inicio || !fin) {
+    alert("Selecciona fechas");
+    return;
+  }
 
   let snapshot = await db.collection("cortes").orderBy("fecha").get();
 
@@ -180,6 +189,11 @@ async function generarPDF() {
       registros.push({...r, fechaObj: fecha});
     }
   });
+
+  if (registros.length === 0) {
+    alert("No hay datos en ese rango");
+    return;
+  }
 
   let y = 40;
   let totalGeneral = 0;
@@ -221,7 +235,7 @@ async function generarPDF() {
 
     doc.text(r.fechaObj.toLocaleTimeString(), 10, y);
     doc.text(r.cliente, 35, y);
-    doc.text(r.servicios.join(","), 90, y);
+    doc.text(r.servicios.join(" + "), 90, y);
     doc.text("$"+r.monto, 160, y);
 
     totalDia += r.monto;
