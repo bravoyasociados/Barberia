@@ -87,9 +87,9 @@ button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;f
 
 </div>
 
+<script>
 
- <script>
-
+// 🔥 FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyCSF7dc0cy3B-hSaFTYAwU-gNc0o12JTG0",
   authDomain: "barberia-pro-3ca72.firebaseapp.com",
@@ -99,15 +99,11 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-console.log("🔥 Firebase cargado");
-
 let seleccionados = [];
 let totalAuto = 0;
 
 // LOGIN
 function login(){
-  console.log("LOGIN CLICK");
-
   let u = document.getElementById("user").value;
   let p = document.getElementById("pass").value;
 
@@ -126,8 +122,6 @@ function login(){
 
 // SERVICIOS
 function toggle(el,s,p){
-  console.log("Servicio:", s);
-
   el.classList.toggle("active");
 
   if(seleccionados.includes(s)){
@@ -141,9 +135,8 @@ function toggle(el,s,p){
   document.getElementById("monto").value = totalAuto;
 }
 
-// GUARDAR
+// GUARDAR CORTE
 async function guardar(){
-  console.log("Guardar click");
 
   let cliente = document.getElementById("cliente").value;
 
@@ -154,92 +147,129 @@ async function guardar(){
 
   await db.collection("cortes").add({
     cliente,
-    servicios: seleccionados,
+    servicios:[...seleccionados],
     monto: totalAuto,
-    fecha: new Date().toISOString()
+    fecha:new Date().toISOString()
   });
 
-  alert("Guardado OK");
+  document.getElementById("cliente").value="";
+  document.getElementById("monto").value="";
+  seleccionados=[];
+  totalAuto=0;
+
+  document.querySelectorAll(".service-btn").forEach(b=>b.classList.remove("active"));
 }
 
-// ESCUCHAR
+// HISTORIALES
 function escuchar(){
 
-  db.collection("citas").onSnapshot(snap=>{
-    console.log("Citas recibidas:", snap.size);
+  db.collection("cortes").orderBy("fecha","desc")
+  .onSnapshot(snap=>{
+    let cont = document.getElementById("historial");
+    cont.innerHTML="";
 
+    snap.forEach(doc=>{
+      let d=doc.data();
+      let f=new Date(d.fecha);
+
+      cont.innerHTML+=`
+      <div class="card">
+      ${d.cliente}<br>
+      ${(d.servicios || []).join(" + ")}<br>
+      $${d.monto}<br>
+      ${f.toLocaleString()}
+      </div>`;
+    });
+  });
+
+  db.collection("citas").orderBy("fecha","desc")
+  .onSnapshot(snap=>{
     let cont = document.getElementById("listaCitas");
     cont.innerHTML="";
 
     snap.forEach(doc=>{
-      let c = doc.data();
-      cont.innerHTML += `<div>${c.cliente}</div>`;
+      let c=doc.data();
+
+      cont.innerHTML+=`
+      <div class="card">
+      ${c.cliente}<br>
+      ${c.telefono}<br>
+      ${new Date(c.fecha).toLocaleString()}<br>
+      ${c.estado}
+      </div>`;
     });
   });
+
 }
 
-// 🔥 AGENDAR DEBUG
+// AGENDAR
 async function agendar(){
 
-  console.log("CLICK AGENDAR");
-
-  let cliente = document.getElementById("clienteCita").value;
-  let telefono = document.getElementById("telefonoCita").value;
-  let fecha = document.getElementById("fechaCita").value;
-
-  console.log(cliente, telefono, fecha);
+  let cliente=document.getElementById("clienteCita").value;
+  let telefono=document.getElementById("telefonoCita").value;
+  let fecha=document.getElementById("fechaCita").value;
 
   if(!cliente || !telefono || !fecha){
-    alert("Faltan datos");
+    alert("Completa datos");
     return;
   }
 
-  try{
+  let fechaISO=new Date(fecha).toISOString();
 
-    await db.collection("citas").add({
-      cliente,
-      telefono,
-      fecha,
-      estado:"Pendiente"
-    });
+  await db.collection("citas").add({
+    cliente,
+    telefono,
+    fecha:fechaISO,
+    estado:"Pendiente"
+  });
 
-    alert("🔥 Guardado en Firebase");
+  alert("Cita guardada ✅");
 
-  }catch(e){
-    console.error(e);
-    alert("❌ Error Firebase");
-  }
+  let inicio=new Date(fechaISO);
+  let fin=new Date(inicio.getTime()+30*60000);
 
+  let url="https://calendar.google.com/calendar/render?action=TEMPLATE"
+  +"&text="+encodeURIComponent(cliente)
+  +"&dates="+inicio.toISOString().replace(/-|:|\.\d+/g,"")+"/"+fin.toISOString().replace(/-|:|\.\d+/g,"");
+
+  window.open(url,"_blank");
+
+  document.getElementById("clienteCita").value="";
+  document.getElementById("telefonoCita").value="";
+  document.getElementById("fechaCita").value="";
 }
 
-// 🔥 PDF DEBUG
+// PDF
 async function generarPDF(){
-
-  console.log("CLICK PDF");
-
-  if(!window.jspdf){
-    alert("jsPDF no cargó");
-    return;
-  }
 
   const { jsPDF } = window.jspdf;
   let doc = new jsPDF();
 
+  let inicio = new Date(document.getElementById("fechaInicio").value+"T00:00:00");
+  let fin = new Date(document.getElementById("fechaFin").value+"T23:59:59");
+
   let snap = await db.collection("cortes").get();
 
-  console.log("Cortes:", snap.size);
+  let y=20,total=0;
 
-  let y=20;
+  doc.text("King’s Barber Reporte",10,y);
+  y+=10;
 
   snap.forEach(d=>{
     let r=d.data();
-    doc.text(r.cliente || "Sin nombre",10,y);
-    y+=6;
+    let f=new Date(r.fecha);
+
+    if(f>=inicio && f<=fin){
+      doc.text(`${f.toLocaleString()} | ${r.cliente} | ${(r.servicios || []).join(" + ")} | $${r.monto}`,10,y);
+      total+=r.monto;
+      y+=6;
+    }
   });
 
-  doc.save("reporte.pdf");
+  y+=10;
+  doc.text("TOTAL: $"+total,10,y);
 
-  alert("PDF generado");
+  doc.save("reporte.pdf");
 }
 
 </script>
