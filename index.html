@@ -28,7 +28,7 @@ button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;f
 <header>💈 King’s Barber</header>
 
 <!-- LOGIN -->
-<div id="login" class="container">
+<div id="pantallaLogin" class="container">
 <input id="user" placeholder="Usuario">
 <input id="pass" type="password" placeholder="Contraseña">
 <button onclick="login()">Entrar</button>
@@ -98,23 +98,26 @@ let rol = "";
 let seleccionados = [];
 let totalAuto = 0;
 
-// LOGIN
+// LOGIN CORREGIDO
 function login(){
-  let u = user.value;
-  let p = pass.value;
 
-  if(u==="admin" && p==="1234"){
-    rol="admin";
-    reportes.classList.remove("hidden");
-  } else if(u==="barbero" && p==="1234"){
-    rol="barbero";
-  } else {
-    alert("Error");
+  let u = document.getElementById("user").value;
+  let p = document.getElementById("pass").value;
+
+  if(u === "admin" && p === "1234"){
+    rol = "admin";
+    document.getElementById("reportes").classList.remove("hidden");
+  } 
+  else if(u === "barbero" && p === "1234"){
+    rol = "barbero";
+  } 
+  else {
+    alert("Usuario o contraseña incorrectos");
     return;
   }
 
-  login.style.display="none";
-  app.classList.remove("hidden");
+  document.getElementById("pantallaLogin").style.display = "none";
+  document.getElementById("app").classList.remove("hidden");
 
   escuchar();
 }
@@ -131,7 +134,7 @@ function toggle(el, servicio, precio){
     totalAuto += precio;
   }
 
-  monto.value = totalAuto;
+  document.getElementById("monto").value = totalAuto;
 }
 
 // GUARDAR CORTE
@@ -198,11 +201,19 @@ function escuchar(){
 
 // CITAS
 async function agendar(){
+  if(!clienteCita.value || !fechaCita.value){
+    alert("Completa datos");
+    return;
+  }
+
   await db.collection("citas").add({
     cliente: clienteCita.value,
     fecha: fechaCita.value,
     estado:"Pendiente"
   });
+
+  clienteCita.value="";
+  fechaCita.value="";
 }
 
 async function estado(id,e){
