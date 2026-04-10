@@ -7,6 +7,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body {margin:0;font-family:Arial;background:#0b0b0b;color:#fff;}
@@ -14,6 +15,9 @@ header {background:#000;padding:15px;text-align:center;font-size:20px;font-weigh
 .container {padding:15px;}
 input, select {width:100%;padding:10px;margin:5px 0;}
 button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;font-weight:bold;}
+.services {display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.service-btn {padding:15px;background:#1c1c1c;text-align:center;border-radius:8px;cursor:pointer;}
+.service-btn.active {background:#00c853;color:#000;}
 .card {background:#1a1a1a;padding:10px;margin-top:10px;border-radius:8px;}
 .hidden {display:none;}
 </style>
@@ -25,7 +29,6 @@ button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;f
 
 <!-- LOGIN -->
 <div id="login" class="container">
-<h3>Login</h3>
 <input id="user" placeholder="Usuario">
 <input id="pass" type="password" placeholder="Contraseña">
 <button onclick="login()">Entrar</button>
@@ -39,15 +42,21 @@ button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;f
 <h3>Registrar Corte</h3>
 <input id="cliente" placeholder="Cliente">
 
-<select id="servicio">
-<option>Corte</option>
-<option>Ceja y barba</option>
-<option>Facial con corte</option>
-<option>Corte especial</option>
-</select>
+<div class="services">
+<div class="service-btn" onclick="toggle(this,'Corte',100)">Corte $100</div>
+<div class="service-btn" onclick="toggle(this,'Ceja y barba',20)">Ceja y barba $20</div>
+<div class="service-btn" onclick="toggle(this,'Facial con corte',150)">Facial $150</div>
+<div class="service-btn" onclick="toggle(this,'Corte especial',150)">Especial $150</div>
+</div>
 
-<input id="monto" placeholder="Monto">
+<input id="monto" placeholder="Total">
 <button onclick="guardar()">Guardar</button>
+</div>
+
+<!-- HISTORIAL CORTES -->
+<div class="card">
+<h3>Historial del día</h3>
+<div id="historial"></div>
 </div>
 
 <!-- CITAS -->
@@ -58,10 +67,17 @@ button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;f
 <button onclick="agendar()">Agendar</button>
 </div>
 
-<!-- LISTA CITAS -->
 <div class="card">
 <h3>Historial de Citas</h3>
 <div id="listaCitas"></div>
+</div>
+
+<!-- REPORTES (ADMIN) -->
+<div id="reportes" class="card hidden">
+<h3>📄 Reporte</h3>
+<input type="date" id="fechaInicio">
+<input type="date" id="fechaFin">
+<button onclick="generarPDF()">Generar PDF</button>
 </div>
 
 </div>
@@ -79,95 +95,145 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 let rol = "";
+let seleccionados = [];
+let totalAuto = 0;
 
 // LOGIN
 function login(){
-  let u = document.getElementById("user").value;
-  let p = document.getElementById("pass").value;
+  let u = user.value;
+  let p = pass.value;
 
   if(u==="admin" && p==="1234"){
     rol="admin";
-  }else if(u==="barbero" && p==="1234"){
+    reportes.classList.remove("hidden");
+  } else if(u==="barbero" && p==="1234"){
     rol="barbero";
-  }else{
+  } else {
     alert("Error");
     return;
   }
 
-  document.getElementById("login").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
+  login.style.display="none";
+  app.classList.remove("hidden");
 
-  escucharCitas();
+  escuchar();
+}
+
+// MULTI SERVICIOS
+function toggle(el, servicio, precio){
+  el.classList.toggle("active");
+
+  if(seleccionados.includes(servicio)){
+    seleccionados = seleccionados.filter(s=>s!==servicio);
+    totalAuto -= precio;
+  }else{
+    seleccionados.push(servicio);
+    totalAuto += precio;
+  }
+
+  monto.value = totalAuto;
 }
 
 // GUARDAR CORTE
 async function guardar(){
-  let cliente = document.getElementById("cliente").value;
-  let servicio = document.getElementById("servicio").value;
-  let monto = parseFloat(document.getElementById("monto").value);
-
-  if(!cliente || !monto){
+  if(!cliente.value || seleccionados.length===0){
     alert("Completa datos");
     return;
   }
 
   await db.collection("cortes").add({
-    cliente,
-    servicio,
-    monto,
+    cliente: cliente.value,
+    servicios: seleccionados,
+    monto: parseFloat(monto.value),
     fecha: new Date().toISOString()
   });
 
-  alert("Guardado");
+  cliente.value="";
+  monto.value="";
+  seleccionados=[];
+  totalAuto=0;
+
+  document.querySelectorAll(".service-btn").forEach(b=>b.classList.remove("active"));
 }
 
-// AGENDAR
-async function agendar(){
-  let cliente = document.getElementById("clienteCita").value;
-  let fecha = document.getElementById("fechaCita").value;
+// ESCUCHAR DATOS
+function escuchar(){
 
-  if(!cliente || !fecha){
-    alert("Completa datos");
-    return;
-  }
+  db.collection("cortes").onSnapshot(snap=>{
+    historial.innerHTML="";
+    let hoy = new Date().toDateString();
 
-  await db.collection("citas").add({
-    cliente,
-    fecha,
-    estado:"Pendiente"
-  });
-}
+    snap.forEach(doc=>{
+      let d = doc.data();
+      let f = new Date(d.fecha);
 
-// ESCUCHAR CITAS (TIEMPO REAL)
-function escucharCitas(){
-
-  db.collection("citas").orderBy("fecha")
-  .onSnapshot(snapshot=>{
-    let cont = document.getElementById("listaCitas");
-    cont.innerHTML="";
-
-    snapshot.forEach(doc=>{
-      let c = doc.data();
-
-      cont.innerHTML+=`
+      if(f.toDateString()===hoy){
+        historial.innerHTML += `
         <div class="card">
-          👤 ${c.cliente}<br>
-          📅 ${new Date(c.fecha).toLocaleString()}<br>
-          Estado: ${c.estado}<br>
-          <button onclick="estado('${doc.id}','Llego')">Llegó</button>
-          <button onclick="estado('${doc.id}','No llegó')">No llegó</button>
-        </div>
-      `;
+          ${d.cliente}<br>
+          ${d.servicios.join(" + ")}<br>
+          $${d.monto}<br>
+          ${f.toLocaleString()}
+        </div>`;
+      }
+    });
+  });
+
+  db.collection("citas").onSnapshot(snap=>{
+    listaCitas.innerHTML="";
+    snap.forEach(doc=>{
+      let c = doc.data();
+      listaCitas.innerHTML += `
+      <div class="card">
+        ${c.cliente}<br>
+        ${new Date(c.fecha).toLocaleString()}<br>
+        ${c.estado}<br>
+        <button onclick="estado('${doc.id}','Llego')">Llegó</button>
+        <button onclick="estado('${doc.id}','No llegó')">No llegó</button>
+      </div>`;
     });
   });
 
 }
 
-// CAMBIAR ESTADO
-async function estado(id, e){
-  await db.collection("citas").doc(id).update({
-    estado:e
+// CITAS
+async function agendar(){
+  await db.collection("citas").add({
+    cliente: clienteCita.value,
+    fecha: fechaCita.value,
+    estado:"Pendiente"
   });
+}
+
+async function estado(id,e){
+  await db.collection("citas").doc(id).update({estado:e});
+}
+
+// PDF
+async function generarPDF(){
+  const { jsPDF } = window.jspdf;
+  let doc = new jsPDF();
+
+  let inicio = new Date(fechaInicio.value+"T00:00:00");
+  let fin = new Date(fechaFin.value+"T23:59:59");
+
+  let snap = await db.collection("cortes").get();
+
+  let y=20;
+  doc.text("King’s Barber Reporte",10,y);
+  y+=10;
+
+  snap.forEach(docSnap=>{
+    let r=docSnap.data();
+    let f=new Date(r.fecha);
+
+    if(f>=inicio && f<=fin){
+      doc.text(`${f.toLocaleString()} | ${r.cliente} | ${r.servicios.join(" + ")} | $${r.monto}`,10,y);
+      y+=6;
+    }
+  });
+
+  doc.save("reporte.pdf");
 }
 
 </script>
