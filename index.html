@@ -3,11 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>King's Barber</title>
+<title>Barbería PRO</title>
 
-<!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#000000">
+
+<!-- Firebase COMPAT -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <!-- PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -15,7 +18,7 @@
 <style>
 body {
   margin: 0;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: Arial;
   background: #0b0b0b;
   color: #fff;
 }
@@ -23,17 +26,14 @@ header {
   background: #000;
   padding: 15px;
   text-align: center;
-  font-size: 22px;
-  font-weight: bold;
 }
-.container { padding: 15px; }
+.container {
+  padding: 15px;
+}
 input {
   width: 100%;
-  padding: 12px;
-  margin-bottom: 10px;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  padding: 10px;
+  margin: 5px 0;
 }
 .services {
   display: grid;
@@ -42,45 +42,32 @@ input {
 }
 .service-btn {
   padding: 15px;
-  border-radius: 10px;
   background: #1c1c1c;
-  text-align: center;
   cursor: pointer;
-  border: 2px solid transparent;
+  text-align: center;
 }
 .service-btn.active {
-  border: 2px solid #00c853;
-  background: #263238;
+  background: #00c853;
+  color: #000;
 }
 button {
   width: 100%;
   padding: 15px;
   margin-top: 10px;
-  font-size: 18px;
-  border: none;
-  border-radius: 10px;
   background: #00c853;
-  color: #000;
-  font-weight: bold;
-}
-.summary {
-  background: #121212;
-  padding: 15px;
-  margin-top: 10px;
-  border-radius: 10px;
+  border: none;
 }
 .item {
   background: #1a1a1a;
   padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 10px;
+  margin-top: 10px;
 }
 </style>
 </head>
 
 <body>
 
-<header>💈 King's Barber</header>
+<header>💈 Barbería PRO</header>
 
 <div class="container">
 
@@ -88,25 +75,25 @@ button {
 
 <div class="services">
   <div class="service-btn" onclick="toggle(this,'Corte',100)">Corte</div>
-  <div class="service-btn" onclick="toggle(this,'Ceja y barba',20)">Ceja y barba</div>
-  <div class="service-btn" onclick="toggle(this,'Facial con corte',150)">Facial con corte</div>
-  <div class="service-btn" onclick="toggle(this,'Corte especial',150)">Corte especial</div>
+  <div class="service-btn" onclick="toggle(this,'Barba',80)">Barba</div>
+  <div class="service-btn" onclick="toggle(this,'Greca',50)">Grecas</div>
+  <div class="service-btn" onclick="toggle(this,'Navaja',60)">Navaja</div>
 </div>
 
 <input type="number" id="monto" placeholder="Total">
 
-<button onclick="guardar()">Guardar Servicio</button>
+<button onclick="guardar()">Guardar</button>
 
-<div class="summary">
-  💰 Hoy: $<span id="hoy">0</span><br>
-  📅 Semana: $<span id="semana">0</span>
+<div>
+💰 Hoy: $<span id="hoy">0</span><br>
+📅 Semana: $<span id="semana">0</span>
 </div>
 
-<div class="summary">
-  <h3>📄 Reporte</h3>
-  <input type="date" id="fechaInicio">
-  <input type="date" id="fechaFin">
-  <button onclick="generarPDF()">Generar PDF</button>
+<div>
+<h3>PDF</h3>
+<input type="date" id="fechaInicio">
+<input type="date" id="fechaFin">
+<button onclick="generarPDF()">Generar PDF</button>
 </div>
 
 <div id="historial"></div>
@@ -114,9 +101,22 @@ button {
 </div>
 
 <script>
+
+// 🔥 CONFIG FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyCSF7dc0cy3B-hSaFTYAwU-gNc0o12JTG0",
+  authDomain: "barberia-pro-3ca72.firebaseapp.com",
+  projectId: "barberia-pro-3ca72",
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// VARIABLES
 let seleccionados = [];
 let totalAuto = 0;
 
+// SERVICIOS
 function toggle(el, servicio, precio) {
   el.classList.toggle("active");
 
@@ -131,50 +131,47 @@ function toggle(el, servicio, precio) {
   document.getElementById("monto").value = totalAuto;
 }
 
-function guardar() {
-  let cliente = document.getElementById("cliente").value.trim();
-  let monto = parseFloat(document.getElementById("monto").value);
+// 🔥 GUARDAR CORREGIDO
+async function guardar() {
+  try {
+    let cliente = document.getElementById("cliente").value;
+    let monto = document.getElementById("monto").value;
 
-  if (!cliente || seleccionados.length === 0 || isNaN(monto)) {
-    alert("Completa todos los datos");
-    return;
+    if (!cliente || seleccionados.length === 0 || !monto) {
+      alert("Completa los datos");
+      return;
+    }
+
+    let data = {
+      cliente,
+      servicios: [...seleccionados],
+      monto: parseFloat(monto),
+      fecha: new Date().toISOString()
+    };
+
+    console.log("Enviando a Firebase:", data);
+
+    await db.collection("cortes").add(data);
+
+    alert("Guardado correctamente ✅");
+
+    document.getElementById("cliente").value = "";
+    document.getElementById("monto").value = "";
+    seleccionados = [];
+    totalAuto = 0;
+
+    document.querySelectorAll(".service-btn")
+      .forEach(btn => btn.classList.remove("active"));
+
+  } catch (error) {
+    console.error("ERROR FIREBASE:", error);
+    alert("Error al guardar ❌ (revisa consola)");
   }
-
-  let registros = JSON.parse(localStorage.getItem("cortes")) || [];
-
-  registros.push({
-    cliente,
-    servicios: [...seleccionados],
-    monto,
-    fecha: new Date().toISOString()
-  });
-
-  localStorage.setItem("cortes", JSON.stringify(registros));
-
-  document.getElementById("cliente").value = "";
-  document.getElementById("monto").value = "";
-  seleccionados = [];
-  totalAuto = 0;
-
-  document.querySelectorAll(".service-btn")
-    .forEach(btn => btn.classList.remove("active"));
-
-  cargar();
 }
 
-function mismoDia(f1, f2) {
-  return f1.toDateString() === f2.toDateString();
-}
-
-function mismaSemana(f1, f2) {
-  let oneJan = new Date(f1.getFullYear(),0,1);
-  let w1 = Math.ceil((((f1 - oneJan) / 86400000) + oneJan.getDay()+1)/7);
-  let w2 = Math.ceil((((f2 - oneJan) / 86400000) + oneJan.getDay()+1)/7);
-  return w1 === w2 && f1.getFullYear() === f2.getFullYear();
-}
-
-function cargar() {
-  let registros = JSON.parse(localStorage.getItem("cortes")) || [];
+// 🔄 TIEMPO REAL
+db.collection("cortes").orderBy("fecha", "desc")
+.onSnapshot(snapshot => {
 
   let hoy = new Date();
   let totalHoy = 0;
@@ -183,106 +180,65 @@ function cargar() {
   let cont = document.getElementById("historial");
   cont.innerHTML = "";
 
-  registros.slice().reverse().forEach(r => {
+  snapshot.forEach(doc => {
+    let r = doc.data();
     let fecha = new Date(r.fecha);
 
-    if (mismoDia(fecha, hoy)) totalHoy += r.monto;
-    if (mismaSemana(fecha, hoy)) totalSemana += r.monto;
+    if (fecha.toDateString() === hoy.toDateString()) {
+      totalHoy += r.monto;
 
-    if (!mismoDia(fecha, hoy)) return;
+      cont.innerHTML += `
+        <div class="item">
+          <b>${r.cliente}</b><br>
+          ${r.servicios.join(", ")}<br>
+          $${r.monto}<br>
+          ${fecha.toLocaleTimeString()}
+        </div>
+      `;
+    }
 
-    cont.innerHTML += `
-      <div class="item">
-        <b>${r.cliente}</b><br>
-        💈 ${r.servicios.join(", ")}<br>
-        💰 $${r.monto}<br>
-        ⏰ ${fecha.toLocaleTimeString()}
-      </div>
-    `;
+    // semana
+    let diff = (hoy - fecha) / (1000 * 60 * 60 * 24);
+    if (diff <= 7) totalSemana += r.monto;
   });
 
   document.getElementById("hoy").textContent = totalHoy;
   document.getElementById("semana").textContent = totalSemana;
-}
+});
 
+// 📄 PDF
 async function generarPDF() {
   const { jsPDF } = window.jspdf;
-  let doc = new jsPDF();
 
-  let registros = JSON.parse(localStorage.getItem("cortes")) || [];
+  let inicio = new Date(document.getElementById("fechaInicio").value);
+  let fin = new Date(document.getElementById("fechaFin").value);
 
-  let inicio = document.getElementById("fechaInicio").value;
-  let fin = document.getElementById("fechaFin").value;
+  let snapshot = await db.collection("cortes").get();
 
-  if (!inicio || !fin) {
-    alert("Selecciona fechas");
-    return;
-  }
-
-  inicio = new Date(inicio + "T00:00:00");
-  fin = new Date(fin + "T23:59:59");
-
-  let filtrados = registros.filter(r => {
-    let f = new Date(r.fecha);
-    return f >= inicio && f <= fin;
-  });
-
-  let y = 20;
+  let docPDF = new jsPDF();
+  let y = 10;
   let total = 0;
 
-  doc.setFontSize(18);
-  doc.text("King's Barber", 10, 15);
-
-  doc.setFontSize(12);
-  doc.text("Reporte de Servicios", 10, 22);
-
-  y = 30;
-
-  filtrados.forEach(r => {
+  snapshot.forEach(doc => {
+    let r = doc.data();
     let fecha = new Date(r.fecha);
 
-    doc.text(`${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}`, 10, y);
-    y += 5;
-
-    doc.text(`Cliente: ${r.cliente}`, 10, y);
-    y += 5;
-
-    doc.text(`Servicios: ${r.servicios.join(", ")}`, 10, y);
-    y += 5;
-
-    doc.text(`Monto: $${r.monto}`, 10, y);
-    y += 10;
-
-    total += r.monto;
-
-    if (y > 270) {
-      doc.addPage();
-      y = 20;
+    if (fecha >= inicio && fecha <= fin) {
+      docPDF.text(`${r.cliente} - $${r.monto}`, 10, y);
+      y += 10;
+      total += r.monto;
     }
   });
 
-  doc.text(`TOTAL: $${total}`, 10, y + 10);
-
-  doc.save("reporte-barberia.pdf");
+  docPDF.text("TOTAL: $" + total, 10, y + 10);
+  docPDF.save("reporte.pdf");
 }
 
-// REGISTRAR SERVICE WORKER (CLAVE PARA INSTALAR APP)
-
+// PWA
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js")
-      .then(reg => {
-        console.log("SW registrado");
-
-        // FORZAR DETECCIÓN DE INSTALACIÓN
-        window.addEventListener("beforeinstallprompt", (e) => {
-          console.log("Instalable detectado");
-        });
-
-      })
-      .catch(err => console.log("Error SW:", err));
-  });
+  navigator.serviceWorker.register("service-worker.js");
 }
+
 </script>
 
 </body>
