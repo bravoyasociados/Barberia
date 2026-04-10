@@ -13,7 +13,7 @@
 body {margin:0;font-family:Arial;background:#0b0b0b;color:#fff;}
 header {background:#000;padding:15px;text-align:center;font-size:20px;font-weight:bold;}
 .container {padding:15px;}
-input, select {width:100%;padding:10px;margin:5px 0;}
+input {width:100%;padding:10px;margin:5px 0;}
 button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;font-weight:bold;}
 .services {display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .service-btn {padding:15px;background:#1c1c1c;text-align:center;border-radius:8px;cursor:pointer;}
@@ -53,7 +53,7 @@ button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;f
 <button onclick="guardar()">Guardar</button>
 </div>
 
-<!-- HISTORIAL CORTES -->
+<!-- HISTORIAL -->
 <div class="card">
 <h3>Historial del día</h3>
 <div id="historial"></div>
@@ -62,7 +62,8 @@ button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;f
 <!-- CITAS -->
 <div class="card">
 <h3>Agendar Cita</h3>
-<input id="clienteCita" placeholder="Cliente">
+<input id="clienteCita" placeholder="Nombre del cliente">
+<input id="telefonoCita" placeholder="WhatsApp">
 <input id="fechaCita" type="datetime-local">
 <button onclick="agendar()">Agendar</button>
 </div>
@@ -72,7 +73,7 @@ button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;f
 <div id="listaCitas"></div>
 </div>
 
-<!-- REPORTES (ADMIN) -->
+<!-- REPORTES -->
 <div id="reportes" class="card hidden">
 <h3>📄 Reporte</h3>
 <input type="date" id="fechaInicio">
@@ -84,7 +85,7 @@ button {width:100%;padding:15px;margin-top:10px;background:#00c853;border:none;f
 
 <script>
 
-// 🔥 FIREBASE
+// FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyCSF7dc0cy3B-hSaFTYAwU-gNc0o12JTG0",
   authDomain: "barberia-pro-3ca72.firebaseapp.com",
@@ -98,52 +99,44 @@ let rol = "";
 let seleccionados = [];
 let totalAuto = 0;
 
-// LOGIN CORREGIDO
+// LOGIN
 function login(){
+  let u = user.value;
+  let p = pass.value;
 
-  let u = document.getElementById("user").value;
-  let p = document.getElementById("pass").value;
-
-  if(u === "admin" && p === "1234"){
-    rol = "admin";
-    document.getElementById("reportes").classList.remove("hidden");
-  } 
-  else if(u === "barbero" && p === "1234"){
-    rol = "barbero";
-  } 
-  else {
-    alert("Usuario o contraseña incorrectos");
+  if(u==="admin" && p==="1234"){
+    rol="admin";
+    reportes.classList.remove("hidden");
+  } else if(u==="barbero" && p==="1234"){
+    rol="barbero";
+  } else {
+    alert("Error");
     return;
   }
 
-  document.getElementById("pantallaLogin").style.display = "none";
-  document.getElementById("app").classList.remove("hidden");
+  pantallaLogin.style.display="none";
+  app.classList.remove("hidden");
 
   escuchar();
 }
 
-// MULTI SERVICIOS
+// SERVICIOS
 function toggle(el, servicio, precio){
   el.classList.toggle("active");
 
   if(seleccionados.includes(servicio)){
     seleccionados = seleccionados.filter(s=>s!==servicio);
     totalAuto -= precio;
-  }else{
+  } else {
     seleccionados.push(servicio);
     totalAuto += precio;
   }
 
-  document.getElementById("monto").value = totalAuto;
+  monto.value = totalAuto;
 }
 
 // GUARDAR CORTE
 async function guardar(){
-  if(!cliente.value || seleccionados.length===0){
-    alert("Completa datos");
-    return;
-  }
-
   await db.collection("cortes").add({
     cliente: cliente.value,
     servicios: seleccionados,
@@ -159,7 +152,7 @@ async function guardar(){
   document.querySelectorAll(".service-btn").forEach(b=>b.classList.remove("active"));
 }
 
-// ESCUCHAR DATOS
+// ESCUCHAR
 function escuchar(){
 
   db.collection("cortes").onSnapshot(snap=>{
@@ -186,11 +179,13 @@ function escuchar(){
     listaCitas.innerHTML="";
     snap.forEach(doc=>{
       let c = doc.data();
+
       listaCitas.innerHTML += `
       <div class="card">
-        ${c.cliente}<br>
-        ${new Date(c.fecha).toLocaleString()}<br>
-        ${c.estado}<br>
+        👤 ${c.cliente}<br>
+        📱 ${c.telefono}<br>
+        📅 ${new Date(c.fecha).toLocaleString()}<br>
+        Estado: ${c.estado}<br>
         <button onclick="estado('${doc.id}','Llego')">Llegó</button>
         <button onclick="estado('${doc.id}','No llegó')">No llegó</button>
       </div>`;
@@ -199,29 +194,52 @@ function escuchar(){
 
 }
 
-// CITAS
+// AGENDAR + GOOGLE CALENDAR
 async function agendar(){
-  if(!clienteCita.value || !fechaCita.value){
+
+  let cliente = clienteCita.value;
+  let telefono = telefonoCita.value;
+  let fecha = fechaCita.value;
+
+  if(!cliente || !telefono || !fecha){
     alert("Completa datos");
     return;
   }
 
   await db.collection("citas").add({
-    cliente: clienteCita.value,
-    fecha: fechaCita.value,
+    cliente,
+    telefono,
+    fecha,
     estado:"Pendiente"
   });
 
+  let inicio = new Date(fecha);
+  let fin = new Date(inicio.getTime() + 30*60000);
+
+  function format(d){
+    return d.toISOString().replace(/-|:|\.\d+/g,"");
+  }
+
+  let url = `https://calendar.google.com/calendar/render?action=TEMPLATE
+  &text=Cita+Barberia+-+${encodeURIComponent(cliente)}
+  &dates=${format(inicio)}/${format(fin)}
+  &details=WhatsApp:+${telefono}`;
+
+  window.open(url,"_blank");
+
   clienteCita.value="";
+  telefonoCita.value="";
   fechaCita.value="";
 }
 
+// ESTADO
 async function estado(id,e){
   await db.collection("citas").doc(id).update({estado:e});
 }
 
 // PDF
 async function generarPDF(){
+
   const { jsPDF } = window.jspdf;
   let doc = new jsPDF();
 
@@ -230,19 +248,24 @@ async function generarPDF(){
 
   let snap = await db.collection("cortes").get();
 
-  let y=20;
+  let y=20, total=0;
+
   doc.text("King’s Barber Reporte",10,y);
   y+=10;
 
-  snap.forEach(docSnap=>{
-    let r=docSnap.data();
+  snap.forEach(d=>{
+    let r=d.data();
     let f=new Date(r.fecha);
 
     if(f>=inicio && f<=fin){
       doc.text(`${f.toLocaleString()} | ${r.cliente} | ${r.servicios.join(" + ")} | $${r.monto}`,10,y);
+      total+=r.monto;
       y+=6;
     }
   });
+
+  y+=10;
+  doc.text("TOTAL: $"+total,10,y);
 
   doc.save("reporte.pdf");
 }
