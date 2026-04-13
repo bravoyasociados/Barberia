@@ -9,13 +9,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
-body {margin:0;font-family:Arial;background:#000;color:#fff;}
-.container {padding:15px;}
+body{margin:0;font-family:Arial;background:#000;color:#fff}
+.container{padding:15px}
 .hidden{display:none}
 
 /* SPLASH */
-#splash{position:fixed;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;z-index:999;}
-.splash-logo{width:150px;border-radius:50%;animation:splash 1.5s;}
+#splash{position:fixed;width:100%;height:100%;background:#000;display:flex;justify-content:center;align-items:center;z-index:999}
+.splash-logo{width:150px;border-radius:50%;animation:splash 1.5s}
 @keyframes splash{0%{scale:0.5;opacity:0}100%{scale:1;opacity:1}}
 
 /* LOGIN */
@@ -30,12 +30,11 @@ body {margin:0;font-family:Arial;background:#000;color:#fff;}
 .menu-item:hover .icono{background:#00c853}
 
 /* SECCIONES */
-.seccion{display:none;opacity:0;transform:translateY(20px);transition:0.4s}
+.seccion{display:none;opacity:0;transform:translateY(20px);transition:.4s}
 .seccion.activa{display:block;opacity:1;transform:translateY(0)}
 
 .card{background:#1a1a1a;padding:10px;margin-top:10px;border-radius:8px}
 
-/* PRODUCTOS */
 .producto{border:2px solid #333;padding:10px;margin-top:8px;border-radius:8px}
 .producto.activo{border:2px solid #00c853}
 .controls{display:flex;justify-content:space-between;margin-top:5px}
@@ -66,25 +65,17 @@ input,select{width:100%;padding:10px;margin-top:5px}
 <!-- APP -->
 <div id="app" class="container hidden">
 
-<!-- MENU -->
+<button onclick="logout()" style="background:red">Cerrar sesión</button>
+
 <div class="menu">
-<div class="menu-item" onclick="mostrarSeccion('ventas')">
-<div class="icono">💰</div><span>Ventas</span>
-</div>
-<div class="menu-item" onclick="mostrarSeccion('servicios')">
-<div class="icono">✂️</div><span>Servicios</span>
-</div>
-<div class="menu-item" onclick="mostrarSeccion('productos')">
-<div class="icono">📦</div><span>Productos</span>
-</div>
-<div class="menu-item" onclick="mostrarSeccion('usuarios')">
-<div class="icono">👑</div><span>Usuarios</span>
-</div>
+<div class="menu-item" onclick="mostrarSeccion('ventas')"><div class="icono">💰</div><span>Ventas</span></div>
+<div class="menu-item" onclick="mostrarSeccion('servicios')"><div class="icono">✂️</div><span>Servicios</span></div>
+<div class="menu-item" onclick="mostrarSeccion('productos')"><div class="icono">📦</div><span>Productos</span></div>
+<div class="menu-item" onclick="mostrarSeccion('usuarios')"><div class="icono">👑</div><span>Usuarios</span></div>
 </div>
 
 <!-- VENTAS -->
 <div id="ventas" class="seccion card">
-
 <input id="cliente" placeholder="Cliente">
 
 <h4>Servicios</h4>
@@ -100,14 +91,13 @@ input,select{width:100%;padding:10px;margin-top:5px}
 </select>
 
 <input id="monto" placeholder="Total">
-
 <button onclick="guardar()">Guardar Venta</button>
 </div>
 
 <!-- SERVICIOS -->
 <div id="servicios" class="seccion card">
 <input id="nombreServicio" placeholder="Nombre">
-<input id="precioServicio" type="number" placeholder="Precio">
+<input id="precioServicio" type="number">
 <button onclick="crearServicio()">Agregar Servicio</button>
 <div id="adminServicios"></div>
 </div>
@@ -138,10 +128,17 @@ input,select{width:100%;padding:10px;margin-top:5px}
 
 <script>
 
-// SPLASH
+// SPLASH + AUTO LOGIN
 setTimeout(()=>{
 splash.style.display="none";
-pantallaLogin.classList.remove("hidden");
+
+let guardado = localStorage.getItem("usuario");
+
+if(guardado){
+  iniciarApp(JSON.parse(guardado));
+}else{
+  pantallaLogin.classList.remove("hidden");
+}
 },2000);
 
 // FIREBASE
@@ -157,12 +154,24 @@ let carrito={},total=0,serviciosSel=[];
 
 // LOGIN
 async function login(){
+
 let snap=await db.collection("usuarios")
 .where("usuario","==",user.value)
-.where("password","==",pass.value).get();
+.where("password","==",pass.value)
+.get();
 
 if(snap.empty){alert("Error");return;}
 
+let usuario=snap.docs[0].data();
+
+// GUARDAR SESIÓN
+localStorage.setItem("usuario",JSON.stringify(usuario));
+
+iniciarApp(usuario);
+}
+
+// INICIAR APP
+function iniciarApp(usuario){
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
 
@@ -170,6 +179,12 @@ mostrarSeccion("ventas");
 cargarProductos();
 cargarServicios();
 cargarAdmin();
+}
+
+// LOGOUT
+function logout(){
+localStorage.removeItem("usuario");
+location.reload();
 }
 
 // SECCIONES
@@ -185,7 +200,7 @@ listaServicios.innerHTML="";
 snap.forEach(doc=>{
 let s=doc.data();
 listaServicios.innerHTML+=`
-<button onclick="addServicio('${s.nombre}',${s.precio})">
+<button onclick="addServicio('${s.nombre}',${s.precio}')">
 ${s.nombre} - $${s.precio}
 </button>`;
 });
@@ -194,7 +209,7 @@ ${s.nombre} - $${s.precio}
 
 function addServicio(n,p){
 serviciosSel.push(n);
-total+=p;
+total+=Number(p);
 monto.value=total;
 }
 
@@ -264,6 +279,7 @@ cargarProductos();
 
 // ADMIN
 function cargarAdmin(){
+
 db.collection("productos").onSnapshot(snap=>{
 adminProductos.innerHTML="";
 snap.forEach(doc=>{
@@ -337,16 +353,16 @@ nuevoUser.value="";nuevoPass.value="";nuevaComision.value="";
 // EDITAR
 async function editProd(id){
 await db.collection("productos").doc(id).update({
-nombre:n["n"+id].value,
-precio:Number(p["p"+id].value),
-stock:Number(s["s"+id].value)
+nombre:document.getElementById("n"+id).value,
+precio:Number(document.getElementById("p"+id).value),
+stock:Number(document.getElementById("s"+id).value)
 });
 }
 
 async function editServ(id){
 await db.collection("servicios").doc(id).update({
-nombre:sn["sn"+id].value,
-precio:Number(sp["sp"+id].value)
+nombre:document.getElementById("sn"+id).value,
+precio:Number(document.getElementById("sp"+id).value)
 });
 }
 
