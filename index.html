@@ -14,13 +14,11 @@ body {margin:0;font-family:Arial;background:#0b0b0b;color:#fff;}
 header {background:#000;padding:15px;text-align:center;font-size:20px;font-weight:bold;}
 .container {padding:15px;}
 input, select {width:100%;padding:10px;margin:5px 0;}
-button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;font-weight:bold;}
+button {width:100%;padding:10px;margin-top:8px;background:#00c853;border:none;font-weight:bold;}
 .card {background:#1a1a1a;padding:10px;margin-top:10px;border-radius:8px;}
-.services {display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.service-btn, .producto-btn {padding:10px;background:#1c1c1c;border-radius:8px;cursor:pointer;text-align:center;}
+.service-btn, .producto-btn {padding:10px;background:#1c1c1c;border-radius:8px;cursor:pointer;text-align:center;margin-top:5px;}
 .active {background:#00c853;color:#000;}
 .hidden {display:none;}
-.logo {display:block;margin:40px auto;width:150px;}
 .producto-img {width:100%;height:100px;object-fit:cover;border-radius:6px;}
 </style>
 </head>
@@ -28,7 +26,6 @@ button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;fo
 <body>
 
 <div id="pantallaLogin" class="container">
-<img src="icono-192.png" class="logo">
 <input id="user" placeholder="Usuario">
 <input id="pass" type="password" placeholder="Contraseña">
 <button onclick="login()">Entrar</button>
@@ -36,18 +33,17 @@ button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;fo
 
 <div id="app" class="container hidden">
 
-<header>💈 King’s Barber</header>
+<header id="titulo">💈 King’s Barber</header>
 
 <div class="card">
 <h3>Registrar Venta</h3>
 
 <input id="cliente" placeholder="Cliente">
 
-<div class="services">
+<div>
 <div class="service-btn" onclick="toggle(this,'Corte',100)">Corte $100</div>
 <div class="service-btn" onclick="toggle(this,'Ceja',20)">Ceja $20</div>
 <div class="service-btn" onclick="toggle(this,'Facial',150)">Facial $150</div>
-<div class="service-btn" onclick="toggle(this,'Especial',150)">Especial $150</div>
 </div>
 
 <h4>Productos</h4>
@@ -67,6 +63,11 @@ button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;fo
 
 <div id="panelAdmin" class="card hidden">
 
+<h3>⚙️ Configuración</h3>
+<input id="nombreNegocio" placeholder="Nombre negocio">
+<input type="file" id="logoNegocio">
+<button onclick="guardarConfig()">Guardar Configuración</button>
+
 <h3>👑 Usuarios</h3>
 <input id="nuevoUser" placeholder="Usuario">
 <input id="nuevoPass" placeholder="Contraseña">
@@ -76,16 +77,16 @@ button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;fo
 </select>
 <input id="nuevaComision" type="number" placeholder="Comisión">
 <button onclick="crearUsuario()">Crear Usuario</button>
-
 <div id="listaUsuarios"></div>
 
 <h3>📦 Productos</h3>
 <input id="nombreProd" placeholder="Nombre">
 <input id="precioProd" type="number" placeholder="Precio">
 <input id="stockProd" type="number" placeholder="Stock">
-<input type="file" id="imagenProd">
-
-<button onclick="crearProducto()">Agregar Producto</button>
+<input type="file" id="imagenProd" onchange="previewImagen()">
+<img id="preview" style="width:100%;display:none;">
+<progress id="barraProgreso" max="100" style="width:100%;display:none;"></progress>
+<button id="btnGuardarProducto" onclick="crearProducto()">Agregar Producto</button>
 
 <div id="adminProductos"></div>
 
@@ -110,7 +111,6 @@ let seleccionados = [];
 let productosSeleccionados = [];
 let totalAuto = 0;
 
-// LOGIN
 async function login(){
   let snap = await db.collection("usuarios")
   .where("usuario","==",user.value)
@@ -133,7 +133,6 @@ async function login(){
   }
 }
 
-// SERVICIOS
 function toggle(el,s,p){
   el.classList.toggle("active");
 
@@ -148,18 +147,15 @@ function toggle(el,s,p){
   monto.value = totalAuto;
 }
 
-// PRODUCTOS BARBERO
 function cargarProductos(){
   db.collection("productos").onSnapshot(snap=>{
     listaProductos.innerHTML="";
-
     snap.forEach(doc=>{
       let p = doc.data();
-
       listaProductos.innerHTML+=`
       <div class="producto-btn" onclick="seleccionarProducto('${doc.id}',${p.precio},this)">
-        <img src="${p.imagen || ''}" class="producto-img">
-        ${p.nombre}<br>$${p.precio}<br>Stock: ${p.stock}
+        <img src="${p.imagen}" class="producto-img">
+        ${p.nombre}<br>$${p.precio} | Stock: ${p.stock}
       </div>`;
     });
   });
@@ -181,10 +177,9 @@ function seleccionarProducto(id,precio,el){
   monto.value = totalAuto;
 }
 
-// GUARDAR
 async function guardar(){
 
-  if(!cliente.value || !metodoPago.value || seleccionados.length===0){
+  if(!cliente.value || !metodoPago.value){
     alert("Completa todo");
     return;
   }
@@ -211,41 +206,50 @@ async function guardar(){
   location.reload();
 }
 
-// ADMIN PRODUCTOS CON IMAGEN
-async function crearProducto(){
-
-  let file = document.getElementById("imagenProd").files[0];
-
-  let nombre = nombreProd.value;
-  let precio = Number(precioProd.value);
-  let stock = Number(stockProd.value);
-
-  if(!nombre || !precio || !file){
-    alert("Faltan datos");
-    return;
+// PRODUCTOS
+function previewImagen(){
+  let file = imagenProd.files[0];
+  if(file){
+    preview.src = URL.createObjectURL(file);
+    preview.style.display="block";
   }
-
-  let ref = storage.ref("productos/" + file.name);
-  await ref.put(file);
-
-  let url = await ref.getDownloadURL();
-
-  await db.collection("productos").add({
-    nombre,
-    precio,
-    stock,
-    imagen:url
-  });
-
-  alert("Producto creado");
-
-  nombreProd.value="";
-  precioProd.value="";
-  stockProd.value="";
-  imagenProd.value="";
 }
 
-// ADMIN LISTA PRODUCTOS
+async function crearProducto(){
+
+  let file = imagenProd.files[0];
+  if(!file){ alert("Selecciona imagen"); return; }
+
+  btnGuardarProducto.disabled=true;
+  barraProgreso.style.display="block";
+
+  let ref = storage.ref("productos/"+Date.now()+"_"+file.name);
+  let task = ref.put(file);
+
+  task.on("state_changed",
+    s=>{
+      barraProgreso.value = (s.bytesTransferred/s.totalBytes)*100;
+    },
+    e=>alert("Error"),
+    async ()=>{
+      let url = await ref.getDownloadURL();
+
+      await db.collection("productos").add({
+        nombre:nombreProd.value,
+        precio:Number(precioProd.value),
+        stock:Number(stockProd.value),
+        imagen:url
+      });
+
+      alert("Producto creado");
+
+      btnGuardarProducto.disabled=false;
+      barraProgreso.style.display="none";
+      preview.style.display="none";
+    }
+  );
+}
+
 function cargarProductosAdmin(){
   db.collection("productos").onSnapshot(snap=>{
     adminProductos.innerHTML="";
@@ -253,12 +257,34 @@ function cargarProductosAdmin(){
       let p = doc.data();
       adminProductos.innerHTML+=`
       <div class="card">
-        <img src="${p.imagen}" class="producto-img"><br>
-        ${p.nombre} - $${p.precio} - Stock: ${p.stock}
+        <img src="${p.imagen}" class="producto-img">
+        <input value="${p.nombre}" id="n${doc.id}">
+        <input value="${p.precio}" id="p${doc.id}">
+        <input value="${p.stock}" id="s${doc.id}">
+        <input type="file" id="img${doc.id}">
+        <button onclick="editarProducto('${doc.id}')">Guardar</button>
         <button onclick="eliminarProducto('${doc.id}')">Eliminar</button>
       </div>`;
     });
   });
+}
+
+async function editarProducto(id){
+  let data={
+    nombre:document.getElementById("n"+id).value,
+    precio:Number(document.getElementById("p"+id).value),
+    stock:Number(document.getElementById("s"+id).value)
+  };
+
+  let file=document.getElementById("img"+id).files[0];
+
+  if(file){
+    let ref=storage.ref("productos/"+Date.now()+file.name);
+    await ref.put(file);
+    data.imagen=await ref.getDownloadURL();
+  }
+
+  await db.collection("productos").doc(id).update(data);
 }
 
 async function eliminarProducto(id){
@@ -287,6 +313,21 @@ function cargarUsuarios(){
       </div>`;
     });
   });
+}
+
+// CONFIG
+async function guardarConfig(){
+  let file = logoNegocio.files[0];
+  let data = {nombre:nombreNegocio.value};
+
+  if(file){
+    let ref=storage.ref("config/logo.png");
+    await ref.put(file);
+    data.logo=await ref.getDownloadURL();
+  }
+
+  await db.collection("config").doc("general").set(data);
+  titulo.innerText = nombreNegocio.value;
 }
 
 </script>
