@@ -36,57 +36,21 @@ body{margin:0;font-family:Arial;background:#000;color:#fff}
 .card{background:#1a1a1a;padding:10px;margin-top:10px;border-radius:8px}
 
 /* SERVICIOS */
-.servicios-grid{
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:10px;
-}
-
-.servicio{
-background:#1a1a1a;
-border-radius:50%;
-height:80px;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-font-size:12px;
-text-align:center;
-cursor:pointer;
-border:2px solid #333;
-}
-
-.servicio.activo{
-border:2px solid #00c853;
-background:#003d1f;
-}
+.servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.servicio{background:#1a1a1a;border-radius:50%;height:80px;display:flex;flex-direction:column;justify-content:center;align-items:center;font-size:12px;border:2px solid #333}
+.servicio.activo{border:2px solid #00c853;background:#003d1f}
 
 /* PRODUCTOS */
 .producto{border:2px solid #333;padding:10px;margin-top:8px;border-radius:8px}
 .producto.activo{border:2px solid #00c853}
-.controls{display:flex;justify-content:space-between;margin-top:5px}
+.controls{display:flex;justify-content:space-between}
 
 /* BOTONES */
 button{width:100%;padding:10px;margin-top:8px;background:#00c853;border:none}
 input,select{width:100%;padding:10px;margin-top:5px}
 
-/* LOGOUT FLOAT */
-.logout-btn{
-position:fixed;
-bottom:20px;
-right:20px;
-width:70px;
-height:70px;
-border-radius:50%;
-background:red;
-display:flex;
-justify-content:center;
-align-items:center;
-font-size:28px;
-color:#fff;
-cursor:pointer;
-box-shadow:0 0 15px red;
-}
+/* LOGOUT */
+.logout-btn{position:fixed;bottom:20px;right:20px;width:70px;height:70px;border-radius:50%;background:red;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 15px red;cursor:pointer}
 </style>
 </head>
 
@@ -104,7 +68,7 @@ box-shadow:0 0 15px red;
 </div>
 
 <input id="user" placeholder="Usuario">
-<input id="pass" type="password" placeholder="Contraseña">
+<input id="pass" type="password">
 <button onclick="login()">Entrar</button>
 </div>
 
@@ -113,14 +77,13 @@ box-shadow:0 0 15px red;
 
 <div class="menu">
 <div class="menu-item" onclick="mostrarSeccion('ventas')"><div class="icono">💰</div><span>Ventas</span></div>
-<div class="menu-item" onclick="mostrarSeccion('servicios')"><div class="icono">✂️</div><span>Servicios</span></div>
-<div class="menu-item" onclick="mostrarSeccion('productos')"><div class="icono">📦</div><span>Productos</span></div>
-<div class="menu-item" onclick="mostrarSeccion('usuarios')"><div class="icono">👑</div><span>Usuarios</span></div>
+<div class="menu-item admin-only" onclick="mostrarSeccion('servicios')"><div class="icono">✂️</div></div>
+<div class="menu-item admin-only" onclick="mostrarSeccion('productos')"><div class="icono">📦</div></div>
+<div class="menu-item admin-only" onclick="mostrarSeccion('usuarios')"><div class="icono">👑</div></div>
 </div>
 
 <!-- VENTAS -->
 <div id="ventas" class="seccion card">
-
 <input id="cliente" placeholder="Cliente">
 
 <h4>Servicios</h4>
@@ -139,7 +102,7 @@ box-shadow:0 0 15px red;
 <button onclick="guardar()">Guardar Venta</button>
 </div>
 
-<!-- SERVICIOS ADMIN -->
+<!-- SERVICIOS -->
 <div id="servicios" class="seccion card">
 <input id="nombreServicio" placeholder="Nombre">
 <input id="precioServicio" type="number">
@@ -149,7 +112,7 @@ box-shadow:0 0 15px red;
 
 <!-- PRODUCTOS -->
 <div id="productos" class="seccion card">
-<input id="nombreProd" placeholder="Nombre">
+<input id="nombreProd">
 <input id="precioProd" type="number">
 <input id="stockProd" type="number">
 <button onclick="crearProducto()">Agregar Producto</button>
@@ -158,7 +121,7 @@ box-shadow:0 0 15px red;
 
 <!-- USUARIOS -->
 <div id="usuarios" class="seccion card">
-<input id="nuevoUser" placeholder="Usuario">
+<input id="nuevoUser">
 <input id="nuevoPass">
 <select id="nuevoRol">
 <option value="barbero">Barbero</option>
@@ -171,7 +134,6 @@ box-shadow:0 0 15px red;
 
 </div>
 
-<!-- LOGOUT -->
 <div class="logout-btn" onclick="logout()">🚪</div>
 
 <script>
@@ -179,42 +141,39 @@ box-shadow:0 0 15px red;
 // SPLASH + AUTO LOGIN
 setTimeout(()=>{
 splash.style.display="none";
-let guardado=localStorage.getItem("usuario");
-if(guardado){
-iniciarApp(JSON.parse(guardado));
-}else{
-pantallaLogin.classList.remove("hidden");
-}
+let u=localStorage.getItem("usuario");
+if(u){iniciarApp(JSON.parse(u));}
+else{pantallaLogin.classList.remove("hidden");}
 },2000);
 
 // FIREBASE
-const firebaseConfig={
-apiKey:"AIzaSy...",
-authDomain:"barberia-pro-3ca72.firebaseapp.com",
-projectId:"barberia-pro-3ca72"
-};
+const firebaseConfig={apiKey:"AIzaSy...",authDomain:"barberia-pro-3ca72.firebaseapp.com",projectId:"barberia-pro-3ca72"};
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let carrito={},total=0,serviciosSel=[];
+let carrito={},total=0,serviciosSel=[],usuarioActivo={};
 
 // LOGIN
 async function login(){
-let snap=await db.collection("usuarios")
-.where("usuario","==",user.value)
-.where("password","==",pass.value).get();
-
+let snap=await db.collection("usuarios").where("usuario","==",user.value).where("password","==",pass.value).get();
 if(snap.empty){alert("Error");return;}
-
 let usuario=snap.docs[0].data();
 localStorage.setItem("usuario",JSON.stringify(usuario));
 iniciarApp(usuario);
 }
 
 // INICIAR
-function iniciarApp(){
+function iniciarApp(usuario){
+
+usuarioActivo=usuario;
+
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
+
+if(usuario.rol!=="admin"){
+document.querySelectorAll(".admin-only").forEach(e=>e.style.display="none");
+}
+
 mostrarSeccion("ventas");
 cargarServicios();
 cargarProductos();
@@ -229,21 +188,20 @@ location.reload();
 
 // SECCIONES
 function mostrarSeccion(id){
+if(usuarioActivo.rol!=="admin" && id!=="ventas") return;
 document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
 document.getElementById(id).classList.add("activa");
 }
 
-// SERVICIOS (SELECCIÓN PRO)
+// SERVICIOS
 function cargarServicios(){
 db.collection("servicios").onSnapshot(snap=>{
 listaServicios.innerHTML="";
 snap.forEach(doc=>{
 let s=doc.data();
 let activo=serviciosSel.find(x=>x.nombre===s.nombre);
-
 listaServicios.innerHTML+=`
-<div class="servicio ${activo?'activo':''}"
-onclick="toggleServicio('${s.nombre}',${s.precio})">
+<div class="servicio ${activo?'activo':''}" onclick="toggleServicio('${s.nombre}',${s.precio})">
 ${s.nombre}<br>$${s.precio}
 </div>`;
 });
@@ -251,9 +209,7 @@ ${s.nombre}<br>$${s.precio}
 }
 
 function toggleServicio(n,p){
-
 let existe=serviciosSel.find(s=>s.nombre===n);
-
 if(existe){
 serviciosSel=serviciosSel.filter(s=>s.nombre!==n);
 total-=p;
@@ -261,19 +217,17 @@ total-=p;
 serviciosSel.push({nombre:n,precio:p});
 total+=p;
 }
-
 monto.value=total;
 cargarServicios();
 }
 
-// PRODUCTOS (IGUAL QUE ANTES)
+// PRODUCTOS
 function cargarProductos(){
 db.collection("productos").onSnapshot(snap=>{
 listaProductos.innerHTML="";
 snap.forEach(doc=>{
 let p=doc.data();
 let c=carrito[doc.id]?.cantidad||0;
-
 listaProductos.innerHTML+=`
 <div class="producto ${c>0?'activo':''}">
 ${p.nombre} - $${p.precio}<br>Stock:${p.stock}
@@ -300,34 +254,19 @@ cargarProductos();
 
 // GUARDAR
 async function guardar(){
-
 if(!cliente.value||!metodoPago.value){alert("Completa");return;}
-
 for(let id in carrito){
 await db.collection("productos").doc(id).update({
 stock:firebase.firestore.FieldValue.increment(-carrito[id].cantidad)
 });
 }
-
-await db.collection("ventas").add({
-cliente:cliente.value,
-servicios:serviciosSel,
-productos:carrito,
-metodoPago:metodoPago.value,
-total
-});
-
+await db.collection("ventas").add({cliente:cliente.value,servicios:serviciosSel,productos:carrito,metodoPago:metodoPago.value,total});
 alert("Venta guardada");
 
-cliente.value="";
-metodoPago.value="";
-monto.value="";
-carrito={};
-serviciosSel=[];
-total=0;
+cliente.value="";metodoPago.value="";monto.value="";
+carrito={};serviciosSel=[];total=0;
 
-cargarProductos();
-cargarServicios();
+cargarProductos();cargarServicios();
 }
 
 // ADMIN
@@ -347,35 +286,22 @@ adminServicios.innerHTML+=`
 });
 }
 
-// CREAR
+// CRUD
 async function crearServicio(){
-await db.collection("servicios").add({
-nombre:nombreServicio.value,
-precio:Number(precioServicio.value)
-});
+await db.collection("servicios").add({nombre:nombreServicio.value,precio:Number(precioServicio.value)});
 nombreServicio.value="";precioServicio.value="";
 }
 
 async function crearProducto(){
-await db.collection("productos").add({
-nombre:nombreProd.value,
-precio:Number(precioProd.value),
-stock:Number(stockProd.value)
-});
+await db.collection("productos").add({nombre:nombreProd.value,precio:Number(precioProd.value),stock:Number(stockProd.value)});
 nombreProd.value="";precioProd.value="";stockProd.value="";
 }
 
 async function crearUsuario(){
-await db.collection("usuarios").add({
-usuario:nuevoUser.value,
-password:nuevoPass.value,
-rol:nuevoRol.value,
-comision:Number(nuevaComision.value)
-});
+await db.collection("usuarios").add({usuario:nuevoUser.value,password:nuevoPass.value,rol:nuevoRol.value,comision:Number(nuevaComision.value)});
 nuevoUser.value="";nuevoPass.value="";nuevaComision.value="";
 }
 
-// EDITAR
 async function editServ(id){
 await db.collection("servicios").doc(id).update({
 nombre:document.getElementById("sn"+id).value,
