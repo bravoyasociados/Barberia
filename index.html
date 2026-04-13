@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>King’s Barber</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -10,159 +11,172 @@
 
 <style>
 
-/* 🎨 BASE */
+/* BASE */
 body{
-  margin:0;
-  font-family:'Segoe UI',sans-serif;
-  background:linear-gradient(135deg,#0f0f0f,#1c1c1c);
-  color:#fff;
+margin:0;
+font-family:'Segoe UI',sans-serif;
+background:linear-gradient(135deg,#0f0f0f,#1c1c1c);
+color:#fff;
 }
 
 .container{padding:15px}
 .hidden{display:none}
 
+/* SPLASH */
+#splash{
+position:fixed;
+width:100%;
+height:100%;
+background:#000;
+display:flex;
+justify-content:center;
+align-items:center;
+z-index:999;
+}
+
+.splash-logo{
+width:150px;
+border-radius:50%;
+animation:splash 1.5s;
+}
+
+@keyframes splash{
+0%{scale:0.5;opacity:0}
+100%{scale:1;opacity:1}
+}
+
+/* LOGIN */
+.logo-login{
+width:180px;
+height:180px;
+border-radius:50%;
+display:block;
+margin:40px auto;
+border:4px solid #00c853;
+}
+
 /* HEADER */
 .header{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  position:relative;
-  margin-bottom:15px;
+display:flex;
+align-items:center;
+justify-content:center;
+position:relative;
+margin-bottom:15px;
 }
 
 .logo-mini{
-  position:absolute;
-  left:0;
+position:absolute;
+left:0;
 }
 
 .logo-mini img{
-  width:50px;
-  height:50px;
-  border-radius:50%;
+width:50px;
+height:50px;
+border-radius:50%;
 }
 
 .titulo{
-  font-size:20px;
-  font-weight:bold;
-  letter-spacing:1px;
+font-size:20px;
+font-weight:bold;
 }
 
 /* MENU */
 .menu{
-  display:flex;
-  justify-content:space-around;
-  margin-bottom:20px;
+display:flex;
+justify-content:space-around;
+margin-bottom:20px;
 }
 
 .icono{
-  width:70px;
-  height:70px;
-  border-radius:50%;
-  background:#1f1f1f;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:28px;
-  box-shadow:0 0 15px rgba(0,200,83,0.3);
+width:70px;
+height:70px;
+border-radius:50%;
+background:#1f1f1f;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:28px;
+box-shadow:0 0 10px #00c85344;
 }
 
 /* CARD */
 .card{
-  background:rgba(255,255,255,0.05);
-  backdrop-filter:blur(10px);
-  border-radius:15px;
-  padding:15px;
-  margin-top:15px;
-  box-shadow:0 8px 20px rgba(0,0,0,0.5);
+background:#1f1f1f;
+border-radius:15px;
+padding:15px;
 }
 
-/* INPUTS */
+/* INPUT */
 input,select{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border-radius:10px;
-  border:none;
-  outline:none;
-  background:#2a2a2a;
-  color:#fff;
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:10px;
+border:none;
+background:#2a2a2a;
+color:#fff;
 }
 
-input::placeholder{color:#aaa}
-
-/* BOTÓN */
+/* BOTON */
 button{
-  width:100%;
-  padding:12px;
-  margin-top:12px;
-  border-radius:10px;
-  border:none;
-  font-weight:bold;
-  background:linear-gradient(135deg,#00c853,#00e676);
-  color:#000;
-  box-shadow:0 4px 15px rgba(0,200,83,0.4);
+width:100%;
+padding:12px;
+margin-top:12px;
+border-radius:10px;
+border:none;
+background:linear-gradient(135deg,#00c853,#00e676);
+color:#000;
+font-weight:bold;
 }
 
 /* SERVICIOS */
 .servicios-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:10px;
 }
 
 .servicio{
-  border-radius:12px;
-  padding:10px;
-  background:#1f1f1f;
-  border:1px solid #333;
-  text-align:center;
-  font-size:12px;
-  transition:0.2s;
+background:#1f1f1f;
+padding:10px;
+border-radius:10px;
+text-align:center;
+border:1px solid #333;
 }
 
 .servicio.activo{
-  background:#00c853;
-  color:#000;
-  transform:scale(1.05);
+background:#00c853;
+color:#000;
 }
 
 /* PRODUCTOS */
 .producto{
-  background:#1f1f1f;
-  border-radius:12px;
-  padding:12px;
-  margin-top:10px;
-  border:1px solid #333;
+background:#1f1f1f;
+padding:10px;
+border-radius:10px;
+margin-top:10px;
 }
 
 .controls{
-  display:flex;
-  justify-content:space-between;
-  margin-top:5px;
-}
-
-.controls button{
-  width:40px;
-  border-radius:8px;
+display:flex;
+justify-content:space-between;
 }
 
 /* LOGOUT */
 .logout-btn{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  width:65px;
-  height:65px;
-  border-radius:50%;
-  background:linear-gradient(135deg,#ff1744,#ff5252);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  font-size:26px;
-  box-shadow:0 0 20px rgba(255,0,0,0.6);
+position:fixed;
+bottom:20px;
+right:20px;
+width:65px;
+height:65px;
+border-radius:50%;
+background:red;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:26px;
 }
 
-/* SECCIONES */
 .seccion{display:none}
 .seccion.activa{display:block}
 
@@ -171,12 +185,22 @@ button{
 
 <body>
 
-<div id="pantallaLogin" class="container">
+<!-- SPLASH -->
+<div id="splash">
+<img src="icono-192.png" class="splash-logo">
+</div>
+
+<!-- LOGIN -->
+<div id="pantallaLogin" class="container hidden">
+<img src="icono-192.png" class="logo-login">
+
 <input id="user" placeholder="Usuario">
 <input id="pass" type="password" placeholder="Contraseña">
+
 <button onclick="login()">Entrar</button>
 </div>
 
+<!-- APP -->
 <div id="app" class="container hidden">
 
 <div class="header">
@@ -193,6 +217,7 @@ button{
 
 <!-- VENTAS -->
 <div id="ventas" class="seccion card">
+
 <input id="cliente" placeholder="Nombre del cliente">
 
 <h4>Servicios</h4>
@@ -202,14 +227,15 @@ button{
 <div id="listaProductos"></div>
 
 <select id="metodoPago">
-<option value="">Selecciona método de pago</option>
+<option value="">Método de pago</option>
 <option value="efectivo">Efectivo</option>
 <option value="tarjeta">Tarjeta</option>
 <option value="transferencia">Transferencia</option>
 </select>
 
-<input id="monto" placeholder="Total a pagar">
+<input id="monto" placeholder="Total">
 <button onclick="guardar()">Guardar Venta</button>
+
 </div>
 
 </div>
@@ -223,10 +249,27 @@ apiKey:"AIzaSy...",
 authDomain:"barberia-pro-3ca72.firebaseapp.com",
 projectId:"barberia-pro-3ca72"
 };
+
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
 let usuarioActivo={};
+let serviciosSel=[];
+let total=0;
+
+// SPLASH
+setTimeout(()=>{
+splash.style.display="none";
+
+let u=localStorage.getItem("usuario");
+
+if(u){
+iniciarApp(JSON.parse(u));
+}else{
+pantallaLogin.classList.remove("hidden");
+}
+
+},2000);
 
 // LOGIN
 async function login(){
@@ -237,12 +280,21 @@ let snap=await db.collection("usuarios")
 
 if(snap.empty){alert("Error");return;}
 
-usuarioActivo=snap.docs[0].data();
+let usuario=snap.docs[0].data();
+localStorage.setItem("usuario",JSON.stringify(usuario));
+
+iniciarApp(usuario);
+}
+
+// INICIAR
+function iniciarApp(usuario){
+
+usuarioActivo=usuario;
 
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
 
-if(usuarioActivo.rol!=="admin"){
+if(usuario.rol!=="admin"){
 document.querySelectorAll(".admin").forEach(el=>el.style.display="none");
 }
 
@@ -250,14 +302,21 @@ mostrarSeccion("ventas");
 cargarDatos();
 }
 
-// CARGAR
+// CARGAR DATOS
 function cargarDatos(){
 
 db.collection("servicios").onSnapshot(snap=>{
 listaServicios.innerHTML="";
 snap.forEach(doc=>{
 let s=doc.data();
-listaServicios.innerHTML+=`<div class="servicio">${s.nombre}<br>$${s.precio}</div>`;
+
+let activo=serviciosSel.includes(s.nombre);
+
+listaServicios.innerHTML+=`
+<div class="servicio ${activo?'activo':''}"
+onclick="toggleServicio('${s.nombre}',${s.precio})">
+${s.nombre}<br>$${s.precio}
+</div>`;
 });
 });
 
@@ -265,29 +324,61 @@ db.collection("productos").onSnapshot(snap=>{
 listaProductos.innerHTML="";
 snap.forEach(doc=>{
 let p=doc.data();
-listaProductos.innerHTML+=`<div class="producto">${p.nombre} - $${p.precio}</div>`;
+listaProductos.innerHTML+=`
+<div class="producto">
+${p.nombre} - $${p.precio}
+</div>`;
 });
 });
 
+}
+
+// SERVICIOS
+function toggleServicio(nombre,precio){
+
+if(serviciosSel.includes(nombre)){
+serviciosSel=serviciosSel.filter(s=>s!==nombre);
+total-=precio;
+}else{
+serviciosSel.push(nombre);
+total+=precio;
+}
+
+monto.value=total;
+cargarDatos();
 }
 
 // GUARDAR
 async function guardar(){
+
 await db.collection("ventas").add({
 cliente:cliente.value,
+servicios:serviciosSel,
 metodoPago:metodoPago.value,
-total:monto.value
+total
 });
+
 alert("Venta guardada");
+
+cliente.value="";
+metodoPago.value="";
+monto.value="";
+serviciosSel=[];
+total=0;
+
+cargarDatos();
 }
 
 // UI
 function mostrarSeccion(id){
+if(usuarioActivo.rol!=="admin" && id!=="ventas")return;
+
 document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
 document.getElementById(id).classList.add("activa");
 }
 
 function logout(){
+localStorage.removeItem("usuario");
 location.reload();
 }
 
