@@ -9,49 +9,163 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
-:root{
---bg:#000;
---card:#1a1a1a;
---text:#fff;
+
+/* 🎨 BASE */
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:linear-gradient(135deg,#0f0f0f,#1c1c1c);
+  color:#fff;
 }
-@media (prefers-color-scheme: light){
-:root{--bg:#f5f5f5;--card:#fff;--text:#000;}
-}
-body{margin:0;font-family:Arial;background:var(--bg);color:var(--text)}
+
 .container{padding:15px}
 .hidden{display:none}
 
 /* HEADER */
-.header{display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:15px}
-.logo-mini{position:absolute;left:0}
-.logo-mini img{width:50px;height:50px;border-radius:50%}
-.titulo{font-size:18px;font-weight:bold}
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  margin-bottom:15px;
+}
+
+.logo-mini{
+  position:absolute;
+  left:0;
+}
+
+.logo-mini img{
+  width:50px;
+  height:50px;
+  border-radius:50%;
+}
+
+.titulo{
+  font-size:20px;
+  font-weight:bold;
+  letter-spacing:1px;
+}
 
 /* MENU */
-.menu{display:flex;justify-content:space-around;margin-bottom:20px}
-.menu-item{text-align:center}
-.icono{width:70px;height:70px;background:var(--card);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px}
+.menu{
+  display:flex;
+  justify-content:space-around;
+  margin-bottom:20px;
+}
+
+.icono{
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  background:#1f1f1f;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  box-shadow:0 0 15px rgba(0,200,83,0.3);
+}
+
+/* CARD */
+.card{
+  background:rgba(255,255,255,0.05);
+  backdrop-filter:blur(10px);
+  border-radius:15px;
+  padding:15px;
+  margin-top:15px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.5);
+}
+
+/* INPUTS */
+input,select{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border-radius:10px;
+  border:none;
+  outline:none;
+  background:#2a2a2a;
+  color:#fff;
+}
+
+input::placeholder{color:#aaa}
+
+/* BOTÓN */
+button{
+  width:100%;
+  padding:12px;
+  margin-top:12px;
+  border-radius:10px;
+  border:none;
+  font-weight:bold;
+  background:linear-gradient(135deg,#00c853,#00e676);
+  color:#000;
+  box-shadow:0 4px 15px rgba(0,200,83,0.4);
+}
+
+/* SERVICIOS */
+.servicios-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.servicio{
+  border-radius:12px;
+  padding:10px;
+  background:#1f1f1f;
+  border:1px solid #333;
+  text-align:center;
+  font-size:12px;
+  transition:0.2s;
+}
+
+.servicio.activo{
+  background:#00c853;
+  color:#000;
+  transform:scale(1.05);
+}
+
+/* PRODUCTOS */
+.producto{
+  background:#1f1f1f;
+  border-radius:12px;
+  padding:12px;
+  margin-top:10px;
+  border:1px solid #333;
+}
+
+.controls{
+  display:flex;
+  justify-content:space-between;
+  margin-top:5px;
+}
+
+.controls button{
+  width:40px;
+  border-radius:8px;
+}
+
+/* LOGOUT */
+.logout-btn{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:65px;
+  height:65px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#ff1744,#ff5252);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:26px;
+  box-shadow:0 0 20px rgba(255,0,0,0.6);
+}
 
 /* SECCIONES */
 .seccion{display:none}
 .seccion.activa{display:block}
 
-.card{background:var(--card);padding:10px;margin-top:10px;border-radius:8px}
-
-/* SERVICIOS */
-.servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.servicio{border-radius:50%;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid #ccc;font-size:12px}
-.servicio.activo{border:2px solid #00c853}
-
-/* PRODUCTOS */
-.producto{border:2px solid #ccc;padding:10px;border-radius:8px;margin-top:8px}
-.controls{display:flex;justify-content:space-between}
-
-button{width:100%;padding:10px;margin-top:8px;background:#00c853;border:none}
-input,select{width:100%;padding:10px;margin-top:5px}
-
-/* LOGOUT */
-.logout-btn{position:fixed;bottom:20px;right:20px;width:70px;height:70px;border-radius:50%;background:red;display:flex;justify-content:center;align-items:center;font-size:28px}
 </style>
 </head>
 
@@ -79,48 +193,23 @@ input,select{width:100%;padding:10px;margin-top:5px}
 
 <!-- VENTAS -->
 <div id="ventas" class="seccion card">
-<input id="cliente" placeholder="Cliente">
+<input id="cliente" placeholder="Nombre del cliente">
+
+<h4>Servicios</h4>
 <div id="listaServicios" class="servicios-grid"></div>
+
+<h4>Productos</h4>
 <div id="listaProductos"></div>
 
 <select id="metodoPago">
-<option value="">Método</option>
+<option value="">Selecciona método de pago</option>
 <option value="efectivo">Efectivo</option>
 <option value="tarjeta">Tarjeta</option>
 <option value="transferencia">Transferencia</option>
 </select>
 
-<input id="monto" placeholder="Total">
-<button onclick="guardar()">Guardar</button>
-</div>
-
-<!-- SERVICIOS -->
-<div id="servicios" class="seccion card">
-<input id="nombreServicio" placeholder="Servicio">
-<input id="precioServicio" type="number" placeholder="Precio">
-<button onclick="crearServicio()">Agregar</button>
-<div id="adminServicios"></div>
-</div>
-
-<!-- PRODUCTOS -->
-<div id="productos" class="seccion card">
-<input id="nombreProd" placeholder="Producto">
-<input id="precioProd" type="number">
-<input id="stockProd" type="number">
-<button onclick="crearProducto()">Agregar</button>
-<div id="adminProductos"></div>
-</div>
-
-<!-- USUARIOS -->
-<div id="usuarios" class="seccion card">
-<input id="nuevoUser" placeholder="Usuario">
-<input id="nuevoPass" placeholder="Password">
-<select id="nuevoRol">
-<option value="barbero">Barbero</option>
-<option value="admin">Admin</option>
-</select>
-<button onclick="crearUsuario()">Crear</button>
-<div id="listaUsuarios"></div>
+<input id="monto" placeholder="Total a pagar">
+<button onclick="guardar()">Guardar Venta</button>
 </div>
 
 </div>
@@ -158,11 +247,11 @@ document.querySelectorAll(".admin").forEach(el=>el.style.display="none");
 }
 
 mostrarSeccion("ventas");
-cargarTodo();
+cargarDatos();
 }
 
-// CARGAR TODO
-function cargarTodo(){
+// CARGAR
+function cargarDatos(){
 
 db.collection("servicios").onSnapshot(snap=>{
 listaServicios.innerHTML="";
@@ -180,43 +269,20 @@ listaProductos.innerHTML+=`<div class="producto">${p.nombre} - $${p.precio}</div
 });
 });
 
-db.collection("usuarios").onSnapshot(snap=>{
-listaUsuarios.innerHTML="";
-snap.forEach(doc=>{
-let u=doc.data();
-listaUsuarios.innerHTML+=`<div>${u.usuario}</div>`;
-});
-});
-
 }
 
-// CRUD
-async function crearServicio(){
-await db.collection("servicios").add({
-nombre:nombreServicio.value,
-precio:Number(precioServicio.value)
+// GUARDAR
+async function guardar(){
+await db.collection("ventas").add({
+cliente:cliente.value,
+metodoPago:metodoPago.value,
+total:monto.value
 });
-}
-
-async function crearProducto(){
-await db.collection("productos").add({
-nombre:nombreProd.value,
-precio:Number(precioProd.value),
-stock:Number(stockProd.value)
-});
-}
-
-async function crearUsuario(){
-await db.collection("usuarios").add({
-usuario:nuevoUser.value,
-password:nuevoPass.value,
-rol:nuevoRol.value
-});
+alert("Venta guardada");
 }
 
 // UI
 function mostrarSeccion(id){
-if(usuarioActivo.rol!=="admin" && id!=="ventas") return;
 document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
 document.getElementById(id).classList.add("activa");
 }
