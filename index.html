@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>King’s Barber</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
@@ -17,8 +16,8 @@ input, select {width:100%;padding:10px;margin:5px 0;}
 button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;font-weight:bold;}
 .card {background:#1a1a1a;padding:10px;margin-top:10px;border-radius:8px;}
 .services {display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.service-btn {padding:15px;background:#1c1c1c;text-align:center;border-radius:8px;cursor:pointer;}
-.service-btn.active {background:#00c853;color:#000;}
+.service-btn, .producto-btn {padding:12px;background:#1c1c1c;text-align:center;border-radius:8px;cursor:pointer;}
+.active {background:#00c853;color:#000;}
 .hidden {display:none;}
 .logo {display:block;margin:40px auto;width:150px;}
 </style>
@@ -26,7 +25,6 @@ button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;fo
 
 <body>
 
-<!-- LOGIN -->
 <div id="pantallaLogin" class="container">
 <img src="icono-192.png" class="logo">
 <input id="user" placeholder="Usuario">
@@ -34,12 +32,10 @@ button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;fo
 <button onclick="login()">Entrar</button>
 </div>
 
-<!-- APP -->
 <div id="app" class="container hidden">
 
 <header>💈 King’s Barber</header>
 
-<!-- REGISTRAR VENTA -->
 <div class="card">
 <h3>Registrar Venta</h3>
 
@@ -47,13 +43,16 @@ button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;fo
 
 <div class="services">
 <div class="service-btn" onclick="toggle(this,'Corte',100)">Corte $100</div>
-<div class="service-btn" onclick="toggle(this,'Ceja y barba',20)">Ceja y barba $20</div>
+<div class="service-btn" onclick="toggle(this,'Ceja',20)">Ceja $20</div>
 <div class="service-btn" onclick="toggle(this,'Facial',150)">Facial $150</div>
 <div class="service-btn" onclick="toggle(this,'Especial',150)">Especial $150</div>
 </div>
 
+<h4>Productos</h4>
+<div id="listaProductos"></div>
+
 <select id="metodoPago">
-<option value="">Seleccionar método de pago</option>
+<option value="">Método de pago</option>
 <option value="efectivo">Efectivo</option>
 <option value="tarjeta">Tarjeta</option>
 <option value="transferencia">Transferencia</option>
@@ -64,30 +63,36 @@ button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;fo
 <button onclick="guardar()">Guardar Venta</button>
 </div>
 
-<!-- PANEL ADMIN -->
+<!-- ADMIN -->
 <div id="panelAdmin" class="card hidden">
-<h3>👑 Panel Admin - Usuarios</h3>
 
+<h3>👑 Usuarios</h3>
 <input id="nuevoUser" placeholder="Usuario">
 <input id="nuevoPass" placeholder="Contraseña">
-
 <select id="nuevoRol">
 <option value="barbero">Barbero</option>
 <option value="admin">Admin</option>
 </select>
-
-<input id="nuevaComision" type="number" placeholder="Comisión (ej: 50)">
-
+<input id="nuevaComision" type="number" placeholder="Comisión">
 <button onclick="crearUsuario()">Crear Usuario</button>
 
 <div id="listaUsuarios"></div>
+
+<h3>📦 Productos</h3>
+<input id="nombreProd" placeholder="Nombre">
+<input id="precioProd" type="number" placeholder="Precio">
+<input id="stockProd" type="number" placeholder="Stock">
+
+<button onclick="crearProducto()">Agregar Producto</button>
+
+<div id="adminProductos"></div>
+
 </div>
 
 </div>
 
 <script>
 
-// FIREBASE CONFIG (NO CAMBIES)
 const firebaseConfig = {
   apiKey: "AIzaSy...",
   authDomain: "barberia-pro-3ca72.firebaseapp.com",
@@ -97,40 +102,37 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-let seleccionados = [];
-let totalAuto = 0;
 let usuarioActivo = {};
+let seleccionados = [];
+let productosSeleccionados = [];
+let totalAuto = 0;
 
 // LOGIN
 async function login(){
 
-  let u = document.getElementById("user").value;
-  let p = document.getElementById("pass").value;
+  let u = user.value;
+  let p = pass.value;
 
   let snap = await db.collection("usuarios")
-    .where("usuario","==",u)
-    .where("password","==",p)
-    .get();
+  .where("usuario","==",u)
+  .where("password","==",p)
+  .get();
 
-  if(snap.empty){
-    alert("Usuario incorrecto");
-    return;
-  }
+  if(snap.empty){ alert("Error"); return; }
 
   let data = snap.docs[0].data();
 
-  usuarioActivo = {
-    nombre: data.usuario,
-    rol: data.rol,
-    comision: data.comision || 0
-  };
+  usuarioActivo = data;
 
-  document.getElementById("pantallaLogin").style.display="none";
-  document.getElementById("app").classList.remove("hidden");
+  pantallaLogin.style.display="none";
+  app.classList.remove("hidden");
 
-  if(usuarioActivo.rol === "admin"){
-    document.getElementById("panelAdmin").classList.remove("hidden");
+  cargarProductos();
+
+  if(data.rol==="admin"){
+    panelAdmin.classList.remove("hidden");
     cargarUsuarios();
+    cargarProductosAdmin();
   }
 }
 
@@ -146,99 +148,150 @@ function toggle(el,s,p){
     totalAuto += p;
   }
 
-  document.getElementById("monto").value = totalAuto;
+  monto.value = totalAuto;
 }
 
-// GUARDAR VENTA
+// PRODUCTOS (BARBERO)
+function cargarProductos(){
+  db.collection("productos").onSnapshot(snap=>{
+    listaProductos.innerHTML="";
+
+    snap.forEach(doc=>{
+      let p = doc.data();
+
+      listaProductos.innerHTML+=`
+      <div class="producto-btn" onclick="seleccionarProducto('${doc.id}',${p.precio},this)">
+        ${p.nombre} - $${p.precio} (Stock: ${p.stock})
+      </div>`;
+    });
+  });
+}
+
+function seleccionarProducto(id,precio,el){
+
+  let index = productosSeleccionados.find(p=>p.id===id);
+
+  if(index){
+    productosSeleccionados = productosSeleccionados.filter(p=>p.id!==id);
+    totalAuto -= precio;
+    el.classList.remove("active");
+  }else{
+    productosSeleccionados.push({id,precio});
+    totalAuto += precio;
+    el.classList.add("active");
+  }
+
+  monto.value = totalAuto;
+}
+
+// GUARDAR
 async function guardar(){
 
-  let cliente = document.getElementById("cliente").value;
-  let metodoPago = document.getElementById("metodoPago").value;
+  let cliente = cliente.value;
+  let metodoPago = metodoPago.value;
 
-  if(!cliente || seleccionados.length===0 || !metodoPago){
-    alert("Completa todos los campos");
+  if(!cliente || !metodoPago || seleccionados.length===0){
+    alert("Completa todo");
     return;
+  }
+
+  // descontar stock
+  for(let p of productosSeleccionados){
+    let ref = db.collection("productos").doc(p.id);
+    let snap = await ref.get();
+
+    let stock = snap.data().stock;
+
+    if(stock<=0){
+      alert("Sin stock");
+      return;
+    }
+
+    await ref.update({stock: stock-1});
   }
 
   await db.collection("ventas").add({
     cliente,
     servicios:[...seleccionados],
-    productos: [],
+    productos:[...productosSeleccionados],
     metodoPago,
     total: totalAuto,
-    barbero: usuarioActivo.nombre,
+    barbero: usuarioActivo.usuario,
     comision: usuarioActivo.comision,
     fecha:new Date().toISOString()
   });
 
-  document.getElementById("cliente").value="";
-  document.getElementById("monto").value="";
-  document.getElementById("metodoPago").value="";
-  seleccionados=[];
-  totalAuto=0;
+  alert("Venta guardada");
 
-  document.querySelectorAll(".service-btn").forEach(b=>b.classList.remove("active"));
-
-  alert("Venta guardada ✅");
+  location.reload();
 }
 
-// CREAR USUARIO
-async function crearUsuario(){
+// ADMIN PRODUCTOS
+async function crearProducto(){
 
-  let usuario = document.getElementById("nuevoUser").value;
-  let password = document.getElementById("nuevoPass").value;
-  let rol = document.getElementById("nuevoRol").value;
-  let comision = Number(document.getElementById("nuevaComision").value);
+  let nombre = nombreProd.value;
+  let precio = Number(precioProd.value);
+  let stock = Number(stockProd.value);
 
-  if(!usuario || !password){
-    alert("Completa los datos");
+  if(!nombre || !precio){
+    alert("Datos incompletos");
     return;
   }
 
-  await db.collection("usuarios").add({
-    usuario,
-    password,
-    rol,
-    comision
+  await db.collection("productos").add({
+    nombre,
+    precio,
+    stock
   });
 
-  alert("Usuario creado ✅");
-
-  document.getElementById("nuevoUser").value="";
-  document.getElementById("nuevoPass").value="";
-  document.getElementById("nuevaComision").value="";
-
-  cargarUsuarios();
+  nombreProd.value="";
+  precioProd.value="";
+  stockProd.value="";
 }
 
-// CARGAR USUARIOS
-function cargarUsuarios(){
+function cargarProductosAdmin(){
 
-  db.collection("usuarios").onSnapshot(snap=>{
-
-    let cont = document.getElementById("listaUsuarios");
-    cont.innerHTML="";
+  db.collection("productos").onSnapshot(snap=>{
+    adminProductos.innerHTML="";
 
     snap.forEach(doc=>{
-      let u = doc.data();
+      let p = doc.data();
 
-      cont.innerHTML += `
+      adminProductos.innerHTML+=`
       <div class="card">
-        ${u.usuario} | ${u.rol} | $${u.comision}
-        <button onclick="eliminarUsuario('${doc.id}')">Eliminar</button>
-      </div>
-      `;
+        ${p.nombre} - $${p.precio} - Stock: ${p.stock}
+        <button onclick="eliminarProducto('${doc.id}')">Eliminar</button>
+      </div>`;
     });
-
   });
 }
 
-// ELIMINAR USUARIO
-async function eliminarUsuario(id){
+async function eliminarProducto(id){
+  await db.collection("productos").doc(id).delete();
+}
 
-  if(!confirm("¿Eliminar usuario?")) return;
+// USUARIOS
+async function crearUsuario(){
+  await db.collection("usuarios").add({
+    usuario:nuevoUser.value,
+    password:nuevoPass.value,
+    rol:nuevoRol.value,
+    comision:Number(nuevaComision.value)
+  });
+}
 
-  await db.collection("usuarios").doc(id).delete();
+function cargarUsuarios(){
+  db.collection("usuarios").onSnapshot(snap=>{
+    listaUsuarios.innerHTML="";
+    snap.forEach(doc=>{
+      let u=doc.data();
+      listaUsuarios.innerHTML+=`
+      <div class="card">
+      ${u.usuario} - ${u.rol}
+      <button onclick="db.collection('usuarios').doc('${doc.id}').delete()">Eliminar</button>
+      </div>`;
+    });
+  });
 }
 
 </script>
