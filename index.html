@@ -9,131 +9,45 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
-body {
-  margin:0;
-  font-family:Arial;
-  background: radial-gradient(circle at top, #0f0f0f, #000);
-  color:#fff;
-}
-
-/* SPLASH */
-#splash {
-  position:fixed;
-  width:100%;
-  height:100%;
-  background:#000;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index:999;
-}
-
-.splash-logo {
-  width:150px;
-  height:150px;
-  border-radius:50%;
-  animation: splashAnim 1.5s ease-out;
-}
-
-@keyframes splashAnim {
-  0% { transform:scale(0.5); opacity:0; }
-  100% { transform:scale(1); opacity:1; }
-}
-
-.hidden {display:none;}
-
+body {margin:0;font-family:Arial;background:#000;color:#fff;}
 .container {padding:15px;}
+.card {background:#1a1a1a;padding:10px;margin-top:10px;border-radius:8px;}
 
-header {
-  background:#000;
-  padding:15px;
-  text-align:center;
-  font-size:20px;
-}
-
-/* LOGIN */
-.logo-container {
-  display:flex;
-  justify-content:center;
-  margin-top:80px;
-  margin-bottom:40px;
-}
-
-.logo-login {
-  width:180px;
-  height:180px;
-  border-radius:50%;
-  border:4px solid #00c853;
-  box-shadow:0 0 25px #00c85380;
-  animation: entradaLogo 1s ease-out, pulso 2s infinite 1s;
-}
-
-@keyframes entradaLogo {
-  0% { transform:scale(0.5); opacity:0; }
-  100% { transform:scale(1); }
-}
-
-@keyframes pulso {
-  0% { box-shadow:0 0 10px #00c85380; }
-  50% { box-shadow:0 0 30px #00c853; }
-  100% { box-shadow:0 0 10px #00c85380; }
-}
-
-input, select {
-  width:100%;
-  padding:10px;
-  margin:5px 0;
-}
-
-button {
-  width:100%;
+.producto {
+  border:2px solid #333;
   padding:10px;
   margin-top:8px;
-  background:#00c853;
-  border:none;
-}
-
-.card {
-  background:#1a1a1a;
-  padding:10px;
-  margin-top:10px;
   border-radius:8px;
 }
 
-.btn-toggle {
-  background:#333;
-  margin-top:10px;
+.producto.activo {
+  border:2px solid #00c853;
 }
+
+.controls {
+  display:flex;
+  justify-content:space-between;
+  margin-top:5px;
+}
+
+button {padding:8px;background:#00c853;border:none;color:#000;}
+input, select {width:100%;padding:8px;margin-top:5px;}
+.hidden {display:none;}
 </style>
 </head>
 
 <body>
 
-<!-- SPLASH -->
-<div id="splash">
-  <img src="icono-192.png" class="splash-logo">
-</div>
-
-<!-- LOGIN -->
-<div id="pantallaLogin" class="container hidden">
-
-<div class="logo-container">
-  <img src="icono-192.png" class="logo-login">
-</div>
-
+<div id="pantallaLogin" class="container">
 <input id="user" placeholder="Usuario">
 <input id="pass" type="password" placeholder="Contraseña">
 <button onclick="login()">Entrar</button>
-
 </div>
 
-<!-- APP -->
 <div id="app" class="container hidden">
 
-<header>💈 King’s Barber</header>
-
-<button class="btn-toggle" onclick="toggleSeccion('ventas')">💰 Ventas</button>
-<div id="ventas" class="card">
+<div class="card">
+<h3>Registrar Venta</h3>
 
 <input id="cliente" placeholder="Cliente">
 
@@ -156,25 +70,14 @@ button {
 
 <div id="panelAdmin" class="hidden">
 
-<button class="btn-toggle" onclick="toggleSeccion('usuarios')">👑 Usuarios</button>
-<div id="usuarios" class="card">
-<input id="nuevoUser" placeholder="Usuario">
-<input id="nuevoPass" placeholder="Contraseña">
-<select id="nuevoRol">
-<option value="barbero">Barbero</option>
-<option value="admin">Admin</option>
-</select>
-<input id="nuevaComision" type="number" placeholder="Comisión">
-<button onclick="crearUsuario()">Crear Usuario</button>
-<div id="listaUsuarios"></div>
-</div>
+<div class="card">
+<h3>Productos</h3>
 
-<button class="btn-toggle" onclick="toggleSeccion('productos')">📦 Productos</button>
-<div id="productos" class="card">
 <input id="nombreProd" placeholder="Nombre">
 <input id="precioProd" type="number" placeholder="Precio">
 <input id="stockProd" type="number" placeholder="Stock">
 <button onclick="crearProducto()">Agregar Producto</button>
+
 <div id="adminProductos"></div>
 </div>
 
@@ -184,13 +87,6 @@ button {
 
 <script>
 
-// SPLASH
-setTimeout(()=>{
-  splash.style.display="none";
-  pantallaLogin.classList.remove("hidden");
-},2000);
-
-// FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSy...",
   authDomain: "barberia-pro-3ca72.firebaseapp.com",
@@ -202,7 +98,7 @@ const db = firebase.firestore();
 
 let usuarioActivo = {};
 let servicios = [];
-let productosVenta = [];
+let carrito = {};
 let total = 0;
 
 // LOGIN
@@ -223,14 +119,8 @@ async function login(){
 
   if(usuarioActivo.rol==="admin"){
     panelAdmin.classList.remove("hidden");
-    cargarUsuarios();
     cargarProductosAdmin();
   }
-}
-
-// TOGGLE
-function toggleSeccion(id){
-  document.getElementById(id).classList.toggle("hidden");
 }
 
 // SERVICIOS
@@ -249,21 +139,48 @@ function toggleServicio(nombre,precio){
 function cargarProductos(){
   db.collection("productos").onSnapshot(snap=>{
     listaProductos.innerHTML="";
+
     snap.forEach(doc=>{
       let p=doc.data();
+      let cantidad = carrito[doc.id]?.cantidad || 0;
+
       listaProductos.innerHTML+=`
-      <div class="card">
-        ${p.nombre} - $${p.precio} (Stock:${p.stock})
-        <button onclick="seleccionarProducto('${doc.id}',${p.precio})">Agregar</button>
+      <div class="producto ${cantidad>0 ? 'activo':''}">
+        ${p.nombre} - $${p.precio}<br>
+        Stock: ${p.stock}
+
+        <div class="controls">
+          <button onclick="cambiarCantidad('${doc.id}',-1,${p.precio},${p.stock})">-</button>
+          <span>${cantidad}</span>
+          <button onclick="cambiarCantidad('${doc.id}',1,${p.precio},${p.stock})">+</button>
+        </div>
       </div>`;
     });
   });
 }
 
-function seleccionarProducto(id,precio){
-  productosVenta.push({id,precio});
-  total += precio;
+// CAMBIAR CANTIDAD
+function cambiarCantidad(id,delta,precio,stock){
+
+  if(!carrito[id]) carrito[id] = {cantidad:0,precio};
+
+  let nueva = carrito[id].cantidad + delta;
+
+  if(nueva < 0) nueva = 0;
+  if(nueva > stock){
+    alert("No hay más stock");
+    return;
+  }
+
+  total += (nueva - carrito[id].cantidad) * precio;
+
+  carrito[id].cantidad = nueva;
+
+  if(nueva === 0) delete carrito[id];
+
   monto.value = total;
+
+  cargarProductos();
 }
 
 // GUARDAR
@@ -274,17 +191,24 @@ async function guardar(){
     return;
   }
 
-  for(let p of productosVenta){
-    let ref=db.collection("productos").doc(p.id);
-    let snap=await ref.get();
-    if(snap.data().stock<=0){alert("Sin stock");return;}
-    await ref.update({stock:snap.data().stock-1});
+  for(let id in carrito){
+    let ref = db.collection("productos").doc(id);
+    let snap = await ref.get();
+
+    let nuevoStock = snap.data().stock - carrito[id].cantidad;
+
+    if(nuevoStock < 0){
+      alert("Stock insuficiente");
+      return;
+    }
+
+    await ref.update({stock: nuevoStock});
   }
 
   await db.collection("ventas").add({
     cliente:cliente.value,
     servicios,
-    productos:productosVenta,
+    productos:carrito,
     metodoPago:metodoPago.value,
     total,
     barbero:usuarioActivo.usuario,
@@ -296,31 +220,7 @@ async function guardar(){
   location.reload();
 }
 
-// USUARIOS
-async function crearUsuario(){
-  await db.collection("usuarios").add({
-    usuario:nuevoUser.value,
-    password:nuevoPass.value,
-    rol:nuevoRol.value,
-    comision:Number(nuevaComision.value)
-  });
-}
-
-function cargarUsuarios(){
-  db.collection("usuarios").onSnapshot(snap=>{
-    listaUsuarios.innerHTML="";
-    snap.forEach(doc=>{
-      let u=doc.data();
-      listaUsuarios.innerHTML+=`
-      <div class="card">
-        ${u.usuario} - ${u.rol}
-        <button onclick="db.collection('usuarios').doc('${doc.id}').delete()">Eliminar</button>
-      </div>`;
-    });
-  });
-}
-
-// PRODUCTOS ADMIN
+// ADMIN PRODUCTOS
 async function crearProducto(){
   await db.collection("productos").add({
     nombre:nombreProd.value,
