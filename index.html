@@ -7,6 +7,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
 <style>
 body {margin:0;font-family:Arial;background:#0b0b0b;color:#fff;}
@@ -16,10 +17,11 @@ input, select {width:100%;padding:10px;margin:5px 0;}
 button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;font-weight:bold;}
 .card {background:#1a1a1a;padding:10px;margin-top:10px;border-radius:8px;}
 .services {display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.service-btn, .producto-btn {padding:12px;background:#1c1c1c;text-align:center;border-radius:8px;cursor:pointer;}
+.service-btn, .producto-btn {padding:10px;background:#1c1c1c;border-radius:8px;cursor:pointer;text-align:center;}
 .active {background:#00c853;color:#000;}
 .hidden {display:none;}
 .logo {display:block;margin:40px auto;width:150px;}
+.producto-img {width:100%;height:100px;object-fit:cover;border-radius:6px;}
 </style>
 </head>
 
@@ -63,7 +65,6 @@ button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;fo
 <button onclick="guardar()">Guardar Venta</button>
 </div>
 
-<!-- ADMIN -->
 <div id="panelAdmin" class="card hidden">
 
 <h3>👑 Usuarios</h3>
@@ -82,6 +83,7 @@ button {width:100%;padding:12px;margin-top:8px;background:#00c853;border:none;fo
 <input id="nombreProd" placeholder="Nombre">
 <input id="precioProd" type="number" placeholder="Precio">
 <input id="stockProd" type="number" placeholder="Stock">
+<input type="file" id="imagenProd">
 
 <button onclick="crearProducto()">Agregar Producto</button>
 
@@ -101,6 +103,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const storage = firebase.storage();
 
 let usuarioActivo = {};
 let seleccionados = [];
@@ -109,27 +112,21 @@ let totalAuto = 0;
 
 // LOGIN
 async function login(){
-
-  let u = user.value;
-  let p = pass.value;
-
   let snap = await db.collection("usuarios")
-  .where("usuario","==",u)
-  .where("password","==",p)
+  .where("usuario","==",user.value)
+  .where("password","==",pass.value)
   .get();
 
   if(snap.empty){ alert("Error"); return; }
 
-  let data = snap.docs[0].data();
-
-  usuarioActivo = data;
+  usuarioActivo = snap.docs[0].data();
 
   pantallaLogin.style.display="none";
   app.classList.remove("hidden");
 
   cargarProductos();
 
-  if(data.rol==="admin"){
+  if(usuarioActivo.rol==="admin"){
     panelAdmin.classList.remove("hidden");
     cargarUsuarios();
     cargarProductosAdmin();
@@ -151,7 +148,7 @@ function toggle(el,s,p){
   monto.value = totalAuto;
 }
 
-// PRODUCTOS (BARBERO)
+// PRODUCTOS BARBERO
 function cargarProductos(){
   db.collection("productos").onSnapshot(snap=>{
     listaProductos.innerHTML="";
@@ -161,14 +158,14 @@ function cargarProductos(){
 
       listaProductos.innerHTML+=`
       <div class="producto-btn" onclick="seleccionarProducto('${doc.id}',${p.precio},this)">
-        ${p.nombre} - $${p.precio} (Stock: ${p.stock})
+        <img src="${p.imagen || ''}" class="producto-img">
+        ${p.nombre}<br>$${p.precio}<br>Stock: ${p.stock}
       </div>`;
     });
   });
 }
 
 function seleccionarProducto(id,precio,el){
-
   let index = productosSeleccionados.find(p=>p.id===id);
 
   if(index){
@@ -187,78 +184,76 @@ function seleccionarProducto(id,precio,el){
 // GUARDAR
 async function guardar(){
 
-  let cliente = cliente.value;
-  let metodoPago = metodoPago.value;
-
-  if(!cliente || !metodoPago || seleccionados.length===0){
+  if(!cliente.value || !metodoPago.value || seleccionados.length===0){
     alert("Completa todo");
     return;
   }
 
-  // descontar stock
   for(let p of productosSeleccionados){
     let ref = db.collection("productos").doc(p.id);
     let snap = await ref.get();
-
-    let stock = snap.data().stock;
-
-    if(stock<=0){
-      alert("Sin stock");
-      return;
-    }
-
-    await ref.update({stock: stock-1});
+    if(snap.data().stock<=0){ alert("Sin stock"); return; }
+    await ref.update({stock: snap.data().stock-1});
   }
 
   await db.collection("ventas").add({
-    cliente,
+    cliente:cliente.value,
     servicios:[...seleccionados],
     productos:[...productosSeleccionados],
-    metodoPago,
-    total: totalAuto,
-    barbero: usuarioActivo.usuario,
-    comision: usuarioActivo.comision,
+    metodoPago:metodoPago.value,
+    total:totalAuto,
+    barbero:usuarioActivo.usuario,
+    comision:usuarioActivo.comision,
     fecha:new Date().toISOString()
   });
 
   alert("Venta guardada");
-
   location.reload();
 }
 
-// ADMIN PRODUCTOS
+// ADMIN PRODUCTOS CON IMAGEN
 async function crearProducto(){
+
+  let file = document.getElementById("imagenProd").files[0];
 
   let nombre = nombreProd.value;
   let precio = Number(precioProd.value);
   let stock = Number(stockProd.value);
 
-  if(!nombre || !precio){
-    alert("Datos incompletos");
+  if(!nombre || !precio || !file){
+    alert("Faltan datos");
     return;
   }
+
+  let ref = storage.ref("productos/" + file.name);
+  await ref.put(file);
+
+  let url = await ref.getDownloadURL();
 
   await db.collection("productos").add({
     nombre,
     precio,
-    stock
+    stock,
+    imagen:url
   });
+
+  alert("Producto creado");
 
   nombreProd.value="";
   precioProd.value="";
   stockProd.value="";
+  imagenProd.value="";
 }
 
+// ADMIN LISTA PRODUCTOS
 function cargarProductosAdmin(){
-
   db.collection("productos").onSnapshot(snap=>{
     adminProductos.innerHTML="";
-
     snap.forEach(doc=>{
       let p = doc.data();
-
       adminProductos.innerHTML+=`
       <div class="card">
+        <img src="${p.imagen}" class="producto-img"><br>
         ${p.nombre} - $${p.precio} - Stock: ${p.stock}
         <button onclick="eliminarProducto('${doc.id}')">Eliminar</button>
       </div>`;
