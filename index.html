@@ -3,15 +3,118 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>King’s Barber</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
-body {margin:0;font-family:Arial;background:#000;color:#fff;}
+body {
+  margin:0;
+  font-family:Arial;
+  background:#000;
+  color:#fff;
+}
+
+/* SPLASH */
+#splash {
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+
+.splash-logo {
+  width:150px;
+  height:150px;
+  border-radius:50%;
+  animation:splash 1.5s ease;
+}
+
+@keyframes splash {
+  0% {transform:scale(0.5);opacity:0;}
+  100% {transform:scale(1);opacity:1;}
+}
+
+.hidden {display:none;}
+
 .container {padding:15px;}
-.card {background:#1a1a1a;padding:10px;margin-top:10px;border-radius:8px;}
+
+/* LOGIN */
+.logo-container {
+  display:flex;
+  justify-content:center;
+  margin-top:80px;
+}
+
+.logo-login {
+  width:180px;
+  height:180px;
+  border-radius:50%;
+  border:4px solid #00c853;
+  animation:pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {box-shadow:0 0 10px #00c853;}
+  50% {box-shadow:0 0 30px #00c853;}
+  100% {box-shadow:0 0 10px #00c853;}
+}
+
+/* MENU */
+.menu {
+  display:flex;
+  justify-content:space-around;
+  margin-bottom:20px;
+}
+
+.menu-item {
+  text-align:center;
+  cursor:pointer;
+}
+
+.icono {
+  width:70px;
+  height:70px;
+  background:#1a1a1a;
+  border-radius:50%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:30px;
+  margin:auto;
+  transition:0.3s;
+}
+
+.menu-item:hover .icono {
+  background:#00c853;
+  transform:scale(1.1);
+}
+
+.seccion {
+  display:none;
+  opacity:0;
+  transform:translateY(20px);
+  transition:0.4s;
+}
+
+.seccion.activa {
+  display:block;
+  opacity:1;
+  transform:translateY(0);
+}
+
+.card {
+  background:#1a1a1a;
+  padding:10px;
+  margin-top:10px;
+  border-radius:8px;
+}
 
 .producto {
   border:2px solid #333;
@@ -30,24 +133,63 @@ body {margin:0;font-family:Arial;background:#000;color:#fff;}
   margin-top:5px;
 }
 
-button {padding:8px;background:#00c853;border:none;color:#000;}
-input, select {width:100%;padding:8px;margin-top:5px;}
-.hidden {display:none;}
+button {
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  background:#00c853;
+  border:none;
+}
+
+input, select {
+  width:100%;
+  padding:10px;
+  margin-top:5px;
+}
 </style>
 </head>
 
 <body>
 
-<div id="pantallaLogin" class="container">
+<!-- SPLASH -->
+<div id="splash">
+<img src="icono-192.png" class="splash-logo">
+</div>
+
+<!-- LOGIN -->
+<div id="pantallaLogin" class="container hidden">
+
+<div class="logo-container">
+<img src="icono-192.png" class="logo-login">
+</div>
+
 <input id="user" placeholder="Usuario">
 <input id="pass" type="password" placeholder="Contraseña">
 <button onclick="login()">Entrar</button>
+
 </div>
 
+<!-- APP -->
 <div id="app" class="container hidden">
 
-<div class="card">
-<h3>Registrar Venta</h3>
+<!-- MENU -->
+<div class="menu">
+  <div class="menu-item" onclick="mostrarSeccion('ventas')">
+    <div class="icono">💰</div>
+    <span>Ventas</span>
+  </div>
+  <div class="menu-item" onclick="mostrarSeccion('productos')">
+    <div class="icono">📦</div>
+    <span>Productos</span>
+  </div>
+  <div class="menu-item" onclick="mostrarSeccion('usuarios')">
+    <div class="icono">👑</div>
+    <span>Usuarios</span>
+  </div>
+</div>
+
+<!-- VENTAS -->
+<div id="ventas" class="seccion card">
 
 <input id="cliente" placeholder="Cliente">
 
@@ -68,11 +210,8 @@ input, select {width:100%;padding:8px;margin-top:5px;}
 
 </div>
 
-<div id="panelAdmin" class="hidden">
-
-<div class="card">
-<h3>Productos</h3>
-
+<!-- PRODUCTOS -->
+<div id="productos" class="seccion card">
 <input id="nombreProd" placeholder="Nombre">
 <input id="precioProd" type="number" placeholder="Precio">
 <input id="stockProd" type="number" placeholder="Stock">
@@ -81,12 +220,31 @@ input, select {width:100%;padding:8px;margin-top:5px;}
 <div id="adminProductos"></div>
 </div>
 
+<!-- USUARIOS -->
+<div id="usuarios" class="seccion card">
+<input id="nuevoUser" placeholder="Usuario">
+<input id="nuevoPass" placeholder="Contraseña">
+<select id="nuevoRol">
+<option value="barbero">Barbero</option>
+<option value="admin">Admin</option>
+</select>
+<input id="nuevaComision" type="number" placeholder="Comisión">
+<button onclick="crearUsuario()">Crear Usuario</button>
+
+<div id="listaUsuarios"></div>
 </div>
 
 </div>
 
 <script>
 
+// SPLASH
+setTimeout(()=>{
+  splash.style.display="none";
+  pantallaLogin.classList.remove("hidden");
+},2000);
+
+// FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSy...",
   authDomain: "barberia-pro-3ca72.firebaseapp.com",
@@ -115,12 +273,16 @@ async function login(){
   pantallaLogin.style.display="none";
   app.classList.remove("hidden");
 
+  mostrarSeccion("ventas");
   cargarProductos();
+  cargarUsuarios();
+  cargarProductosAdmin();
+}
 
-  if(usuarioActivo.rol==="admin"){
-    panelAdmin.classList.remove("hidden");
-    cargarProductosAdmin();
-  }
+// MENU
+function mostrarSeccion(id){
+  document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
+  document.getElementById(id).classList.add("activa");
 }
 
 // SERVICIOS
@@ -139,13 +301,12 @@ function toggleServicio(nombre,precio){
 function cargarProductos(){
   db.collection("productos").onSnapshot(snap=>{
     listaProductos.innerHTML="";
-
     snap.forEach(doc=>{
       let p=doc.data();
       let cantidad = carrito[doc.id]?.cantidad || 0;
 
       listaProductos.innerHTML+=`
-      <div class="producto ${cantidad>0 ? 'activo':''}">
+      <div class="producto ${cantidad>0?'activo':''}">
         ${p.nombre} - $${p.precio}<br>
         Stock: ${p.stock}
 
@@ -159,27 +320,22 @@ function cargarProductos(){
   });
 }
 
-// CAMBIAR CANTIDAD
 function cambiarCantidad(id,delta,precio,stock){
 
-  if(!carrito[id]) carrito[id] = {cantidad:0,precio};
+  if(!carrito[id]) carrito[id]={cantidad:0,precio};
 
   let nueva = carrito[id].cantidad + delta;
 
-  if(nueva < 0) nueva = 0;
-  if(nueva > stock){
-    alert("No hay más stock");
-    return;
-  }
+  if(nueva<0) nueva=0;
+  if(nueva>stock){alert("Sin stock");return;}
 
   total += (nueva - carrito[id].cantidad) * precio;
 
   carrito[id].cantidad = nueva;
 
-  if(nueva === 0) delete carrito[id];
+  if(nueva===0) delete carrito[id];
 
   monto.value = total;
-
   cargarProductos();
 }
 
@@ -192,17 +348,14 @@ async function guardar(){
   }
 
   for(let id in carrito){
-    let ref = db.collection("productos").doc(id);
-    let snap = await ref.get();
+    let ref=db.collection("productos").doc(id);
+    let snap=await ref.get();
 
-    let nuevoStock = snap.data().stock - carrito[id].cantidad;
+    let nuevo = snap.data().stock - carrito[id].cantidad;
 
-    if(nuevoStock < 0){
-      alert("Stock insuficiente");
-      return;
-    }
+    if(nuevo<0){alert("Stock insuficiente");return;}
 
-    await ref.update({stock: nuevoStock});
+    await ref.update({stock:nuevo});
   }
 
   await db.collection("ventas").add({
@@ -212,7 +365,6 @@ async function guardar(){
     metodoPago:metodoPago.value,
     total,
     barbero:usuarioActivo.usuario,
-    comision:usuarioActivo.comision,
     fecha:new Date().toISOString()
   });
 
@@ -251,6 +403,30 @@ async function editarProducto(id){
     nombre:document.getElementById("n"+id).value,
     precio:Number(document.getElementById("p"+id).value),
     stock:Number(document.getElementById("s"+id).value)
+  });
+}
+
+// USUARIOS
+async function crearUsuario(){
+  await db.collection("usuarios").add({
+    usuario:nuevoUser.value,
+    password:nuevoPass.value,
+    rol:nuevoRol.value,
+    comision:Number(nuevaComision.value)
+  });
+}
+
+function cargarUsuarios(){
+  db.collection("usuarios").onSnapshot(snap=>{
+    listaUsuarios.innerHTML="";
+    snap.forEach(doc=>{
+      let u=doc.data();
+      listaUsuarios.innerHTML+=`
+      <div class="card">
+        ${u.usuario} - ${u.rol}
+        <button onclick="db.collection('usuarios').doc('${doc.id}').delete()">Eliminar</button>
+      </div>`;
+    });
   });
 }
 
