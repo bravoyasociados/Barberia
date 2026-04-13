@@ -10,7 +10,7 @@
 
 <style>
 
-/* 🎨 TEMA AUTOMÁTICO */
+/* 🎨 TEMA AUTO */
 :root{
   --bg:#000;
   --card:#1a1a1a;
@@ -20,170 +20,60 @@
 @media (prefers-color-scheme: light){
   :root{
     --bg:#f5f5f5;
-    --card:#ffffff;
+    --card:#fff;
     --text:#000;
   }
 }
 
-body{
-  margin:0;
-  font-family:Arial;
-  background:var(--bg);
-  color:var(--text);
-}
-
+body{margin:0;font-family:Arial;background:var(--bg);color:var(--text)}
 .container{padding:15px}
 .hidden{display:none}
 
 /* SPLASH */
-#splash{
-  position:fixed;
-  width:100%;
-  height:100%;
-  background:var(--bg);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index:999;
-}
-
-.splash-logo{
-  width:150px;
-  border-radius:50%;
-  animation:splash 1.5s;
-}
-
-@keyframes splash{
-  0%{scale:0.5;opacity:0}
-  100%{scale:1;opacity:1}
-}
+#splash{position:fixed;width:100%;height:100%;background:var(--bg);display:flex;justify-content:center;align-items:center;z-index:999}
+.splash-logo{width:150px;border-radius:50%;animation:splash 1.5s}
+@keyframes splash{0%{scale:0.5;opacity:0}100%{scale:1;opacity:1}}
 
 /* LOGIN */
-.logo-container{
-  display:flex;
-  justify-content:center;
-  margin-top:80px;
-}
-
-.logo-login{
-  width:180px;
-  height:180px;
-  border-radius:50%;
-  border:4px solid #00c853;
-}
+.logo-container{display:flex;justify-content:center;margin-top:80px}
+.logo-login{width:180px;height:180px;border-radius:50%;border:4px solid #00c853}
 
 /* MENU */
-.menu{
-  display:flex;
-  justify-content:space-around;
-  margin-bottom:20px;
-}
-
-.icono{
-  width:70px;
-  height:70px;
-  background:var(--card);
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:30px;
-}
-
-.menu-item{text-align:center}
+.menu{display:flex;justify-content:space-around;margin-bottom:20px}
+.menu-item{text-align:center;cursor:pointer}
+.icono{width:70px;height:70px;background:var(--card);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px}
 
 /* SECCIONES */
-.seccion{
-  display:none;
-}
+.seccion{display:none}
+.seccion.activa{display:block}
 
-.seccion.activa{
-  display:block;
-}
-
-.card{
-  background:var(--card);
-  padding:10px;
-  margin-top:10px;
-  border-radius:8px;
-}
+.card{background:var(--card);padding:10px;margin-top:10px;border-radius:8px}
 
 /* SERVICIOS */
-.servicios-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-}
-
-.servicio{
-  background:var(--card);
-  border-radius:50%;
-  height:80px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  font-size:12px;
-  border:2px solid #ccc;
-}
-
-.servicio.activo{
-  border:2px solid #00c853;
-}
+.servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.servicio{border-radius:50%;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid #ccc}
+.servicio.activo{border:2px solid #00c853}
 
 /* PRODUCTOS */
-.producto{
-  border:2px solid #ccc;
-  padding:10px;
-  margin-top:8px;
-  border-radius:8px;
-}
+.producto{border:2px solid #ccc;padding:10px;border-radius:8px;margin-top:8px}
+.producto.activo{border:2px solid #00c853}
+.controls{display:flex;justify-content:space-between}
 
-.producto.activo{
-  border:2px solid #00c853;
-}
-
-/* BOTONES */
-button{
-  width:100%;
-  padding:10px;
-  margin-top:8px;
-  background:#00c853;
-  border:none;
-}
-
-input,select{
-  width:100%;
-  padding:10px;
-  margin-top:5px;
-}
+button{width:100%;padding:10px;margin-top:8px;background:#00c853;border:none}
+input,select{width:100%;padding:10px;margin-top:5px}
 
 /* LOGOUT */
-.logout-btn{
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  width:70px;
-  height:70px;
-  border-radius:50%;
-  background:red;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  font-size:28px;
-}
+.logout-btn{position:fixed;bottom:20px;right:20px;width:70px;height:70px;border-radius:50%;background:red;display:flex;justify-content:center;align-items:center;font-size:28px}
 
 </style>
 </head>
 
 <body>
 
-<!-- SPLASH -->
 <div id="splash">
 <img src="icono-192.png" class="splash-logo">
 </div>
 
-<!-- LOGIN -->
 <div id="pantallaLogin" class="container hidden">
 <div class="logo-container">
 <img src="icono-192.png" class="logo-login">
@@ -194,15 +84,17 @@ input,select{
 <button onclick="login()">Entrar</button>
 </div>
 
-<!-- APP -->
 <div id="app" class="container hidden">
 
 <div class="menu">
-<div onclick="mostrarSeccion('ventas')"><div class="icono">💰</div></div>
+<div class="menu-item" onclick="mostrarSeccion('ventas')"><div class="icono">💰</div></div>
+<div class="menu-item admin" onclick="mostrarSeccion('servicios')"><div class="icono">✂️</div></div>
+<div class="menu-item admin" onclick="mostrarSeccion('productos')"><div class="icono">📦</div></div>
+<div class="menu-item admin" onclick="mostrarSeccion('usuarios')"><div class="icono">👑</div></div>
 </div>
 
+<!-- VENTAS -->
 <div id="ventas" class="seccion card">
-
 <input id="cliente" placeholder="Cliente">
 
 <h4>Servicios</h4>
@@ -219,9 +111,36 @@ input,select{
 </select>
 
 <input id="monto" placeholder="Total">
-
 <button onclick="guardar()">Guardar Venta</button>
+</div>
 
+<!-- SERVICIOS -->
+<div id="servicios" class="seccion card">
+<input id="nombreServicio">
+<input id="precioServicio" type="number">
+<button onclick="crearServicio()">Agregar</button>
+<div id="adminServicios"></div>
+</div>
+
+<!-- PRODUCTOS -->
+<div id="productos" class="seccion card">
+<input id="nombreProd">
+<input id="precioProd" type="number">
+<input id="stockProd" type="number">
+<button onclick="crearProducto()">Agregar</button>
+<div id="adminProductos"></div>
+</div>
+
+<!-- USUARIOS -->
+<div id="usuarios" class="seccion card">
+<input id="nuevoUser">
+<input id="nuevoPass">
+<select id="nuevoRol">
+<option value="barbero">Barbero</option>
+<option value="admin">Admin</option>
+</select>
+<button onclick="crearUsuario()">Crear</button>
+<div id="listaUsuarios"></div>
 </div>
 
 </div>
@@ -230,7 +149,7 @@ input,select{
 
 <script>
 
-// SPLASH + LOGIN
+// SPLASH
 setTimeout(()=>{
 splash.style.display="none";
 let u=localStorage.getItem("usuario");
@@ -238,17 +157,11 @@ if(u){iniciarApp(JSON.parse(u));}
 else{pantallaLogin.classList.remove("hidden");}
 },2000);
 
-// FIREBASE
-const firebaseConfig={
-apiKey:"AIzaSy...",
-authDomain:"barberia-pro-3ca72.firebaseapp.com",
-projectId:"barberia-pro-3ca72"
-};
-
+const firebaseConfig={apiKey:"AIzaSy...",authDomain:"barberia-pro-3ca72.firebaseapp.com",projectId:"barberia-pro-3ca72"};
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let carrito={},total=0,serviciosSel=[];
+let usuarioActivo={};
 
 // LOGIN
 async function login(){
@@ -263,68 +176,37 @@ localStorage.setItem("usuario",JSON.stringify(usuario));
 iniciarApp(usuario);
 }
 
-function iniciarApp(){
+// INICIAR
+function iniciarApp(usuario){
+
+usuarioActivo=usuario;
+
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
-mostrarSeccion("ventas");
-cargarServicios();
-cargarProductos();
+
+// 🔥 CONTROL DE ROLES
+if(usuario.rol !== "admin"){
+document.querySelectorAll(".admin").forEach(el=>el.style.display="none");
 }
 
-function logout(){
-localStorage.removeItem("usuario");
-location.reload();
+mostrarSeccion("ventas");
 }
 
 // SECCIONES
 function mostrarSeccion(id){
+
+if(usuarioActivo.rol !== "admin" && id !== "ventas"){
+return;
+}
+
 document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
 document.getElementById(id).classList.add("activa");
 }
 
-// SERVICIOS
-function cargarServicios(){
-db.collection("servicios").onSnapshot(snap=>{
-listaServicios.innerHTML="";
-snap.forEach(doc=>{
-let s=doc.data();
-listaServicios.innerHTML+=`
-<div class="servicio" onclick="toggleServicio('${s.nombre}',${s.precio})">
-${s.nombre}<br>$${s.precio}
-</div>`;
-});
-});
-}
-
-function toggleServicio(n,p){
-serviciosSel.push(n);
-total+=p;
-monto.value=total;
-}
-
-// PRODUCTOS
-function cargarProductos(){
-db.collection("productos").onSnapshot(snap=>{
-listaProductos.innerHTML="";
-snap.forEach(doc=>{
-let p=doc.data();
-listaProductos.innerHTML+=`
-<div class="producto">
-${p.nombre} - $${p.precio}
-</div>`;
-});
-});
-}
-
-// GUARDAR
-async function guardar(){
-await db.collection("ventas").add({
-cliente:cliente.value,
-servicios:serviciosSel,
-metodoPago:metodoPago.value,
-total
-});
-alert("Guardado");
+// LOGOUT
+function logout(){
+localStorage.removeItem("usuario");
+location.reload();
 }
 
 </script>
