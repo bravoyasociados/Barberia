@@ -9,25 +9,125 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
-body {margin:0;font-family:Arial;background:#0b0b0b;color:#fff;}
-header {background:#000;padding:15px;text-align:center;font-size:20px;}
-.container {padding:15px;}
-input, select {width:100%;padding:10px;margin:5px 0;}
-button {width:100%;padding:10px;margin-top:8px;background:#00c853;border:none;}
-.card {background:#1a1a1a;padding:10px;margin-top:10px;border-radius:8px;}
-.btn-toggle {background:#333;margin-top:10px;}
+body {
+  margin:0;
+  font-family:Arial;
+  background: radial-gradient(circle at top, #0f0f0f, #000);
+  color:#fff;
+}
+
+/* SPLASH */
+#splash {
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:999;
+}
+
+.splash-logo {
+  width:150px;
+  height:150px;
+  border-radius:50%;
+  animation: splashAnim 1.5s ease-out;
+}
+
+@keyframes splashAnim {
+  0% { transform:scale(0.5); opacity:0; }
+  100% { transform:scale(1); opacity:1; }
+}
+
 .hidden {display:none;}
+
+.container {padding:15px;}
+
+header {
+  background:#000;
+  padding:15px;
+  text-align:center;
+  font-size:20px;
+}
+
+/* LOGIN */
+.logo-container {
+  display:flex;
+  justify-content:center;
+  margin-top:80px;
+  margin-bottom:40px;
+}
+
+.logo-login {
+  width:180px;
+  height:180px;
+  border-radius:50%;
+  border:4px solid #00c853;
+  box-shadow:0 0 25px #00c85380;
+  animation: entradaLogo 1s ease-out, pulso 2s infinite 1s;
+}
+
+@keyframes entradaLogo {
+  0% { transform:scale(0.5); opacity:0; }
+  100% { transform:scale(1); }
+}
+
+@keyframes pulso {
+  0% { box-shadow:0 0 10px #00c85380; }
+  50% { box-shadow:0 0 30px #00c853; }
+  100% { box-shadow:0 0 10px #00c85380; }
+}
+
+input, select {
+  width:100%;
+  padding:10px;
+  margin:5px 0;
+}
+
+button {
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  background:#00c853;
+  border:none;
+}
+
+.card {
+  background:#1a1a1a;
+  padding:10px;
+  margin-top:10px;
+  border-radius:8px;
+}
+
+.btn-toggle {
+  background:#333;
+  margin-top:10px;
+}
 </style>
 </head>
 
 <body>
 
-<div id="pantallaLogin" class="container">
+<!-- SPLASH -->
+<div id="splash">
+  <img src="icono-192.png" class="splash-logo">
+</div>
+
+<!-- LOGIN -->
+<div id="pantallaLogin" class="container hidden">
+
+<div class="logo-container">
+  <img src="icono-192.png" class="logo-login">
+</div>
+
 <input id="user" placeholder="Usuario">
 <input id="pass" type="password" placeholder="Contraseña">
 <button onclick="login()">Entrar</button>
+
 </div>
 
+<!-- APP -->
 <div id="app" class="container hidden">
 
 <header>💈 King’s Barber</header>
@@ -58,7 +158,6 @@ button {width:100%;padding:10px;margin-top:8px;background:#00c853;border:none;}
 
 <button class="btn-toggle" onclick="toggleSeccion('usuarios')">👑 Usuarios</button>
 <div id="usuarios" class="card">
-
 <input id="nuevoUser" placeholder="Usuario">
 <input id="nuevoPass" placeholder="Contraseña">
 <select id="nuevoRol">
@@ -67,21 +166,16 @@ button {width:100%;padding:10px;margin-top:8px;background:#00c853;border:none;}
 </select>
 <input id="nuevaComision" type="number" placeholder="Comisión">
 <button onclick="crearUsuario()">Crear Usuario</button>
-
 <div id="listaUsuarios"></div>
-
 </div>
 
 <button class="btn-toggle" onclick="toggleSeccion('productos')">📦 Productos</button>
 <div id="productos" class="card">
-
 <input id="nombreProd" placeholder="Nombre">
 <input id="precioProd" type="number" placeholder="Precio">
 <input id="stockProd" type="number" placeholder="Stock">
 <button onclick="crearProducto()">Agregar Producto</button>
-
 <div id="adminProductos"></div>
-
 </div>
 
 </div>
@@ -90,6 +184,13 @@ button {width:100%;padding:10px;margin-top:8px;background:#00c853;border:none;}
 
 <script>
 
+// SPLASH
+setTimeout(()=>{
+  splash.style.display="none";
+  pantallaLogin.classList.remove("hidden");
+},2000);
+
+// FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSy...",
   authDomain: "barberia-pro-3ca72.firebaseapp.com",
@@ -127,7 +228,7 @@ async function login(){
   }
 }
 
-// TOGGLE SECCIONES
+// TOGGLE
 function toggleSeccion(id){
   document.getElementById(id).classList.toggle("hidden");
 }
