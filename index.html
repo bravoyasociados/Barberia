@@ -3,31 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>King’s Barber</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{margin:0;font-family:'Segoe UI';background:#111;color:#fff}
 .container{padding:15px}
 .hidden{display:none}
-
-/* BLOQUEO VISUAL */
-#bloqueo{
-position:fixed;
-top:0;left:0;width:100%;height:100%;
-background:black;
-color:white;
-display:flex;
-align-items:center;
-justify-content:center;
-font-size:20px;
-z-index:9999;
-display:none;
-}
 
 /* HEADER */
 .header{display:flex;justify-content:center;position:relative;margin-bottom:15px}
@@ -56,30 +40,15 @@ input,select{width:100%;padding:10px;margin-top:10px;border-radius:10px;border:n
 /* BOTON */
 button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;background:#00c853;color:#000}
 
-/* SERVICIOS */
-.servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.servicio{background:#1f1f1f;padding:10px;border-radius:10px;text-align:center;border:1px solid #333}
-.servicio.activo{background:#00c853;color:#000}
-
-/* PRODUCTOS */
-.producto{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px;border:1px solid #333}
-.controls{display:flex;justify-content:space-between;margin-top:5px}
-
-/* TABLA */
-table{border-collapse:collapse;margin-top:10px;width:100%}
-td,th{padding:8px;border:1px solid #444;text-align:center}
+.seccion{display:none}
+.seccion.activa{display:block}
 
 /* LOGOUT */
 .logout-btn{position:fixed;bottom:20px;right:20px;width:65px;height:65px;border-radius:50%;background:red;display:flex;align-items:center;justify-content:center;font-size:26px}
-
-.seccion{display:none}
-.seccion.activa{display:block}
 </style>
 </head>
 
 <body>
-
-<div id="bloqueo">⚠️ Pantalla protegida</div>
 
 <!-- LOGIN -->
 <div id="pantallaLogin" class="container hidden">
@@ -98,62 +67,51 @@ td,th{padding:8px;border:1px solid #444;text-align:center}
 </div>
 
 <div class="menu">
-<div class="menu-item active" onclick="mostrarSeccion('ventas',this)"><div class="icono">💰</div><span>Ventas</span></div>
-<div class="menu-item admin" onclick="mostrarSeccion('servicios',this)"><div class="icono">✂️</div><span>Servicios</span></div>
-<div class="menu-item admin" onclick="mostrarSeccion('productos',this)"><div class="icono">📦</div><span>Productos</span></div>
-<div class="menu-item admin" onclick="mostrarSeccion('usuarios',this)"><div class="icono">👑</div><span>Usuarios</span></div>
-<div class="menu-item admin" onclick="mostrarSeccion('reportes',this)"><div class="icono">📊</div><span>Reportes</span></div>
+<div class="menu-item active" onclick="mostrarSeccion('ventas',this)">
+<div class="icono">💰</div><span>Ventas</span>
+</div>
+
+<div class="menu-item admin" onclick="mostrarSeccion('servicios',this)">
+<div class="icono">✂️</div><span>Servicios</span>
+</div>
+
+<div class="menu-item admin" onclick="mostrarSeccion('productos',this)">
+<div class="icono">📦</div><span>Productos</span>
+</div>
+
+<div class="menu-item admin" onclick="mostrarSeccion('usuarios',this)">
+<div class="icono">👑</div><span>Usuarios</span>
+</div>
+
+<div class="menu-item admin" onclick="mostrarSeccion('reportes',this)">
+<div class="icono">📊</div><span>Reportes</span>
+</div>
 </div>
 
 <!-- VENTAS -->
 <div id="ventas" class="seccion card activa">
-<input id="cliente" placeholder="Cliente">
-<div id="listaServicios" class="servicios-grid"></div>
-<div id="listaProductos"></div>
-
-<select id="metodoPago">
-<option value="">Método</option>
-<option value="efectivo">Efectivo</option>
-<option value="tarjeta">Tarjeta</option>
-<option value="transferencia">Transferencia</option>
-</select>
-
-<input id="monto" placeholder="Total">
-<button onclick="guardar()">Guardar</button>
+<h3>Ventas</h3>
+<p>Área de ventas funcionando</p>
 </div>
 
 <!-- SERVICIOS -->
 <div id="servicios" class="seccion card">
-<input id="nombreServicio" placeholder="Nombre">
-<input id="precioServicio" type="number">
-<button onclick="crearServicio()">Agregar</button>
-<div id="adminServicios"></div>
+<h3>Servicios</h3>
+</div>
+
+<!-- PRODUCTOS -->
+<div id="productos" class="seccion card">
+<h3>Productos</h3>
+</div>
+
+<!-- USUARIOS -->
+<div id="usuarios" class="seccion card">
+<h3>Usuarios</h3>
 </div>
 
 <!-- REPORTES -->
 <div id="reportes" class="seccion card">
-<h3>📊 Reportes</h3>
-
-<input type="date" id="fechaInicio">
-<input type="date" id="fechaFin">
-<select id="filtroBarbero"></select>
-
-<button onclick="generarReporte()">Generar</button>
-
-<div id="totalVentas">$0</div>
-
-<table id="tablaDinamica">
-<thead>
-<tr>
-<th>Barbero</th>
-<th>Total</th>
-<th>Servicios</th>
-<th>Productos</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-
+<h3>Reportes</h3>
 </div>
 
 </div>
@@ -162,68 +120,80 @@ td,th{padding:8px;border:1px solid #444;text-align:center}
 
 <script>
 
-/* 🔒 SEGURIDAD */
-document.addEventListener("contextmenu",e=>e.preventDefault());
-document.addEventListener("copy",e=>e.preventDefault());
+const firebaseConfig={
+apiKey:"AIzaSy...",
+authDomain:"barberia-pro-3ca72.firebaseapp.com",
+projectId:"barberia-pro-3ca72"
+};
 
-document.addEventListener("visibilitychange",()=>{
-if(document.hidden){
-bloqueo.style.display="flex";
-}else{
-bloqueo.style.display="none";
-}
-});
-
-/* FIREBASE */
-const firebaseConfig={apiKey:"AIzaSy...",authDomain:"barberia-pro-3ca72.firebaseapp.com",projectId:"barberia-pro-3ca72"};
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
 let usuarioActivo={};
 
-/* LOGIN */
+/* SESIÓN */
 window.onload=()=>{
 let u=localStorage.getItem("usuario");
-if(u) iniciarApp(JSON.parse(u));
-else pantallaLogin.classList.remove("hidden");
+
+if(u){
+iniciarApp(JSON.parse(u));
+}else{
+pantallaLogin.classList.remove("hidden");
+}
 };
 
+/* LOGIN */
 async function login(){
+
 let snap=await db.collection("usuarios")
 .where("usuario","==",user.value)
-.where("password","==",pass.value).get();
+.where("password","==",pass.value)
+.get();
 
-if(snap.empty)return alert("Error");
+if(snap.empty){
+alert("Usuario incorrecto");
+return;
+}
 
 let usuario=snap.docs[0].data();
+
 localStorage.setItem("usuario",JSON.stringify(usuario));
+
 iniciarApp(usuario);
 }
 
+/* INICIAR */
 function iniciarApp(usuario){
+
 usuarioActivo=usuario;
 
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
 
-if(usuario.rol!=="admin"){
+// 🔥 SOLO ocultar botones (NO bloquear lógica)
+if(usuario.rol==="barbero"){
 document.querySelectorAll(".admin").forEach(e=>e.style.display="none");
 }
+
 }
 
-/* NAVEGACIÓN CORREGIDA */
+/* 🔥 NAVEGACIÓN CORRECTA */
 function mostrarSeccion(id,el){
 
-if(usuarioActivo.rol!=="admin" && id!=="ventas"){
-alert("Sin acceso");
+// solo restringe barbero
+if(usuarioActivo.rol==="barbero" && id!=="ventas"){
+alert("Solo acceso a ventas");
 return;
 }
 
+// cambiar vista
 document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
 document.getElementById(id).classList.add("activa");
 
+// menú activo
 document.querySelectorAll(".menu-item").forEach(m=>m.classList.remove("active"));
 if(el) el.classList.add("active");
+
 }
 
 /* LOGOUT */
