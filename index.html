@@ -8,21 +8,21 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
+<!-- 🔥 GRAFICAS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{margin:0;font-family:'Segoe UI';background:linear-gradient(135deg,#0f0f0f,#1c1c1c);color:#fff}
 .container{padding:15px}
 .hidden{display:none}
 
-/* HEADER */
 .header{display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:15px}
 .logo-mini{position:absolute;left:0}
-.logo-mini img{width:50px;height:50px;border-radius:50%}
+.logo-mini img{width:50px;border-radius:50%}
 .titulo{font-size:20px;font-weight:bold}
 
-/* LOGIN */
-.logo-login{width:180px;height:180px;border-radius:50%;display:block;margin:40px auto;border:4px solid #00c853;box-shadow:0 0 25px #00c853}
+.logo-login{width:180px;border-radius:50%;display:block;margin:40px auto;border:4px solid #00c853}
 
-/* MENU */
 .menu{display:flex;justify-content:space-around;margin-bottom:20px}
 .menu-item{text-align:center;cursor:pointer;position:relative}
 .menu-item span{font-size:12px;color:#aaa}
@@ -30,26 +30,17 @@ body{margin:0;font-family:'Segoe UI';background:linear-gradient(135deg,#0f0f0f,#
 .menu-item.active::after{content:"";position:absolute;bottom:-5px;left:20%;width:60%;height:3px;background:#00c853;border-radius:3px}
 .icono{width:70px;height:70px;border-radius:50%;background:#1f1f1f;display:flex;align-items:center;justify-content:center;font-size:28px}
 
-/* CARD */
 .card{background:#1f1f1f;border-radius:15px;padding:15px}
-
-/* INPUT */
 input,select{width:100%;padding:10px;margin-top:10px;border-radius:10px;border:none;background:#2a2a2a;color:#fff}
-
-/* BOTON */
 button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;background:#00c853;color:#000}
 
-/* SERVICIOS */
 .servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .servicio{background:#1f1f1f;padding:10px;border-radius:10px;text-align:center;border:1px solid #333}
 .servicio.activo{background:#00c853;color:#000}
 
-/* PRODUCTOS */
 .producto{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px;border:1px solid #333}
 .controls{display:flex;justify-content:space-between;margin-top:5px}
-.controls button{width:40px}
 
-/* LOGOUT */
 .logout-btn{position:fixed;bottom:20px;right:20px;width:65px;height:65px;border-radius:50%;background:red;display:flex;align-items:center;justify-content:center;font-size:26px}
 
 .seccion{display:none}
@@ -85,56 +76,24 @@ button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;ba
 
 <!-- VENTAS -->
 <div id="ventas" class="seccion card activa">
-<h3>💰 Ventas</h3>
 <input id="cliente" placeholder="Cliente">
-<h4>Servicios</h4>
 <div id="listaServicios" class="servicios-grid"></div>
-<h4>Productos</h4>
 <div id="listaProductos"></div>
+
 <select id="metodoPago">
 <option value="">Método</option>
 <option value="efectivo">Efectivo</option>
 <option value="tarjeta">Tarjeta</option>
 <option value="transferencia">Transferencia</option>
 </select>
+
 <input id="monto" placeholder="Total">
 <button onclick="guardar()">Guardar</button>
 </div>
 
-<!-- SERVICIOS -->
-<div id="servicios" class="seccion card">
-<h3>✂️ Servicios</h3>
-<input id="nombreServicio" placeholder="Nombre">
-<input id="precioServicio" type="number" placeholder="Precio">
-<button onclick="crearServicio()">Agregar</button>
-<div id="adminServicios"></div>
-</div>
-
-<!-- PRODUCTOS -->
-<div id="productos" class="seccion card">
-<h3>📦 Productos</h3>
-<input id="nombreProd" placeholder="Nombre">
-<input id="precioProd" type="number" placeholder="Precio">
-<input id="stockProd" type="number" placeholder="Stock">
-<button onclick="crearProducto()">Agregar</button>
-<div id="adminProductos"></div>
-</div>
-
-<!-- USUARIOS -->
-<div id="usuarios" class="seccion card">
-<h3>👑 Usuarios</h3>
-<input id="nuevoUser" placeholder="Usuario">
-<input id="nuevoPass" placeholder="Contraseña">
-<select id="nuevoRol">
-<option value="barbero">Barbero</option>
-<option value="admin">Admin</option>
-</select>
-<button onclick="crearUsuario()">Crear</button>
-<div id="listaUsuarios"></div>
-</div>
-
 <!-- REPORTES -->
 <div id="reportes" class="seccion card">
+
 <h3>📊 Reportes</h3>
 
 <select id="filtroTiempo">
@@ -144,12 +103,15 @@ button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;ba
 </select>
 
 <button onclick="generarReporte()">Generar</button>
+<button onclick="exportarExcel()">Exportar Excel</button>
 
-<h4>Total vendido</h4>
+<h4>Total</h4>
 <div id="totalVentas">$0</div>
 
-<h4>Por barbero</h4>
 <div id="tablaReporte"></div>
+
+<canvas id="graficaVentas"></canvas>
+
 </div>
 
 </div>
@@ -162,16 +124,14 @@ const firebaseConfig={apiKey:"AIzaSy...",authDomain:"barberia-pro-3ca72.firebase
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let usuarioActivo={},carrito={},total=0,serviciosSel=[];
+let usuarioActivo={};
 
-/* SESIÓN */
 window.onload=()=>{
 let u=localStorage.getItem("usuario");
 if(u) iniciarApp(JSON.parse(u));
 else pantallaLogin.classList.remove("hidden");
 };
 
-/* LOGIN */
 async function login(){
 let snap=await db.collection("usuarios").where("usuario","==",user.value).where("password","==",pass.value).get();
 if(snap.empty)return alert("Error");
@@ -180,70 +140,68 @@ localStorage.setItem("usuario",JSON.stringify(usuario));
 iniciarApp(usuario);
 }
 
-/* INICIAR */
 function iniciarApp(usuario){
 usuarioActivo=usuario;
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
-
-if(usuario.rol!=="admin"){
-document.querySelectorAll(".admin").forEach(e=>e.style.display="none");
-}
-
-cargarTodo();
 }
 
 /* GUARDAR */
 async function guardar(){
 await db.collection("ventas").add({
-cliente:cliente.value,
-total,
+total:Number(monto.value),
 barbero:usuarioActivo.usuario,
 fecha:new Date()
 });
 alert("Guardado");
 }
 
-/* REPORTES */
+/* REPORTES PRO */
 async function generarReporte(){
-
-let filtro=filtroTiempo.value;
-let ahora=new Date();
 
 let snap=await db.collection("ventas").get();
 
 let total=0;
-let resumen={};
+let porBarbero={};
 
 snap.forEach(doc=>{
 let v=doc.data();
-let f=v.fecha?.toDate?.()||new Date();
-
-let incluir=false;
-
-if(filtro==="dia") incluir=f.toDateString()===ahora.toDateString();
-if(filtro==="semana"){let s=new Date();s.setDate(ahora.getDate()-7);incluir=f>=s;}
-if(filtro==="mes"){let m=new Date();m.setMonth(ahora.getMonth()-1);incluir=f>=m;}
-
-if(incluir){
 total+=Number(v.total);
-if(!resumen[v.barbero]) resumen[v.barbero]=0;
-resumen[v.barbero]+=Number(v.total);
-}
+
+if(!porBarbero[v.barbero]) porBarbero[v.barbero]=0;
+porBarbero[v.barbero]+=Number(v.total);
 });
 
 totalVentas.innerHTML="$"+total;
 
 tablaReporte.innerHTML="";
-for(let b in resumen){
-tablaReporte.innerHTML+=`<div class="producto">${b}: $${resumen[b]}</div>`;
+for(let b in porBarbero){
+tablaReporte.innerHTML+=`<div class="producto">${b}: $${porBarbero[b]}</div>`;
 }
 
+new Chart(graficaVentas,{
+type:'bar',
+data:{
+labels:Object.keys(porBarbero),
+datasets:[{data:Object.values(porBarbero)}]
+}
+});
 }
 
-/* UI */
+/* EXCEL */
+function exportarExcel(){
+let texto="Barbero,Total\n";
+document.querySelectorAll("#tablaReporte .producto").forEach(el=>{
+texto+=el.innerText.replace(":"," ,")+"\n";
+});
+let blob=new Blob([texto]);
+let a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="reporte.csv";
+a.click();
+}
+
 function mostrarSeccion(id,el){
-if(usuarioActivo.rol!=="admin"&&id!=="ventas")return;
 document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
 document.getElementById(id).classList.add("activa");
 document.querySelectorAll(".menu-item").forEach(m=>m.classList.remove("active"));
