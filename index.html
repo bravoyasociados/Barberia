@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>King’s Barber</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -13,180 +12,125 @@
 body{margin:0;font-family:'Segoe UI';background:#111;color:#fff}
 .container{padding:15px}
 .hidden{display:none}
-
-.header{text-align:center;margin-bottom:15px}
-.logo{width:60px;border-radius:50%}
-.menu{display:flex;justify-content:space-around;margin:20px 0}
-.menu div{cursor:pointer;text-align:center}
-.active{color:#00e676}
-
-.card{background:#1f1f1f;padding:15px;border-radius:10px}
-input,select,button{width:100%;margin-top:10px;padding:10px;border-radius:10px;border:none}
-button{background:#00c853}
-
-.servicio{padding:10px;margin:5px;background:#333;border-radius:8px;cursor:pointer}
-.servicio.activo{background:#00c853;color:#000}
-
-.producto{margin-top:10px;padding:10px;background:#333;border-radius:8px}
-
+.menu{display:flex;justify-content:space-around;margin:10px 0}
+.menu-item{cursor:pointer;text-align:center}
+.menu-item.active{color:#00e676}
 .seccion{display:none}
 .seccion.activa{display:block}
+.card{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px}
+.servicio{padding:10px;border:1px solid #444;margin:5px;border-radius:10px}
+.servicio.activo{background:#00c853;color:#000}
+.producto{margin:5px;padding:10px;background:#222;border-radius:10px}
 </style>
 </head>
 
 <body>
 
-<div id="login" class="container">
-<input id="user" placeholder="Usuario">
-<input id="pass" type="password" placeholder="Password">
+<div id="pantallaLogin">
+<input id="user" placeholder="usuario">
+<input id="pass" placeholder="password">
 <button onclick="login()">Entrar</button>
 </div>
 
-<div id="app" class="container hidden">
-
-<div class="header">
-<h2>King’s Barber</h2>
-</div>
+<div id="app" class="hidden">
 
 <div class="menu">
-<div onclick="nav('ventas')">💰</div>
-<div onclick="nav('servicios')">✂️</div>
-<div onclick="nav('productos')">📦</div>
-<div onclick="nav('usuarios')">👑</div>
+<div class="menu-item active" onclick="mostrarSeccion('ventas',this)">Ventas</div>
+<div class="menu-item admin" onclick="mostrarSeccion('servicios',this)">Servicios</div>
+<div class="menu-item admin" onclick="mostrarSeccion('productos',this)">Productos</div>
+<div class="menu-item admin" onclick="mostrarSeccion('usuarios',this)">Usuarios</div>
+<div class="menu-item admin" onclick="mostrarSeccion('reportes',this)">Reportes</div>
 </div>
 
-<div id="ventas" class="seccion activa card">
-<input id="cliente" placeholder="Cliente">
-<h4>Servicios</h4>
-<div id="serviciosList"></div>
+<!-- VENTAS -->
+<div id="ventas" class="seccion activa">
 
-<h4>Productos</h4>
-<div id="productosList"></div>
+<div id="listaServicios"></div>
+<div id="listaProductos"></div>
 
 <button onclick="guardar()">Guardar Venta</button>
+
 </div>
 
-<div id="servicios" class="seccion card">
+<!-- SERVICIOS -->
+<div id="servicios" class="seccion">
 <input id="nombreServicio">
 <input id="precioServicio">
 <button onclick="crearServicio()">Agregar</button>
-<div id="serviciosAdmin"></div>
+<div id="adminServicios"></div>
 </div>
 
-<div id="productos" class="seccion card">
+<!-- PRODUCTOS -->
+<div id="productos" class="seccion">
 <input id="nombreProd">
 <input id="precioProd">
 <input id="stockProd">
 <button onclick="crearProducto()">Agregar</button>
-<div id="productosAdmin"></div>
+<div id="adminProductos"></div>
 </div>
 
-<div id="usuarios" class="seccion card">
+<!-- USUARIOS -->
+<div id="usuarios" class="seccion">
 <input id="nuevoUser">
 <input id="nuevoPass">
 <select id="nuevoRol">
 <option value="admin">admin</option>
 <option value="barbero">barbero</option>
 </select>
+<input id="comisionInput">
 <button onclick="crearUsuario()">Crear</button>
-<div id="usuariosList"></div>
+<div id="listaUsuarios"></div>
+</div>
+
+<!-- REPORTES -->
+<div id="reportes" class="seccion">
+<button onclick="generarReporte()">Reporte</button>
+<div id="tabla"></div>
 </div>
 
 </div>
 
 <script>
 
-const firebaseConfig={apiKey:"AIzaSy...",authDomain:"barberia-pro-3ca72.firebaseapp.com",projectId:"barberia-pro-3ca72"};
+const firebaseConfig={apiKey:"AIza...",authDomain:"...",projectId:"..."};
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let usuarioActivo=null;
-let serviciosSel=[];
-let carrito={};
+let usuarioActivo={},serviciosSel=[],carrito={},total=0;
 
 /* LOGIN */
 async function login(){
 let snap=await db.collection("usuarios")
 .where("usuario","==",user.value)
-.where("password","==",pass.value)
-.get();
+.where("password","==",pass.value).get();
 
-if(snap.empty)return alert("Error");
+if(snap.empty)return alert("error");
 
 usuarioActivo=snap.docs[0].data();
 
-login.style.display="none";
+pantallaLogin.style.display="none";
 app.classList.remove("hidden");
 
-init();
+cargar();
 }
 
 /* NAV */
-function nav(id){
+function mostrarSeccion(id,el){
 document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
 document.getElementById(id).classList.add("activa");
 }
 
-/* INIT */
-function init(){
+/* CARGA */
+function cargar(){
 
-// SERVICIOS
 db.collection("servicios").onSnapshot(snap=>{
-serviciosList.innerHTML="";
-serviciosAdmin.innerHTML="";
-
+listaServicios.innerHTML="";
 snap.forEach(doc=>{
 let s=doc.data();
-
-// selección
-serviciosList.innerHTML+=`
+listaServicios.innerHTML+=`
 <div class="servicio ${serviciosSel.includes(s.nombre)?'activo':''}"
-onclick="toggleServicio('${s.nombre}')">
-${s.nombre} - $${s.precio}
-</div>`;
-
-// admin
-serviciosAdmin.innerHTML+=`
-<div class="producto">
-${s.nombre} $${s.precio}
-<button onclick="editarServicio('${doc.id}','${s.nombre}',${s.precio})">✏️</button>
-<button onclick="eliminarServicio('${doc.id}')">🗑</button>
-</div>`;
-});
-});
-
-// PRODUCTOS
-db.collection("productos").onSnapshot(snap=>{
-productosList.innerHTML="";
-productosAdmin.innerHTML="";
-
-snap.forEach(doc=>{
-let p=doc.data();
-
-productosList.innerHTML+=`
-<div class="producto">
-${p.nombre} $${p.precio}
-<button onclick="agregarProd('${doc.id}')">+</button>
-</div>`;
-
-productosAdmin.innerHTML+=`
-<div class="producto">
-${p.nombre}
-<button onclick="editarProducto('${doc.id}','${p.nombre}')">✏️</button>
-</div>`;
-});
-});
-
-// USUARIOS
-db.collection("usuarios").onSnapshot(snap=>{
-usuariosList.innerHTML="";
-snap.forEach(doc=>{
-let u=doc.data();
-
-usuariosList.innerHTML+=`
-<div class="producto">
-${u.usuario}
-<button onclick="eliminarUsuario('${doc.id}')">🗑</button>
+onclick="toggleServicio('${s.nombre}',${s.precio})">
+${s.nombre}
 </div>`;
 });
 });
@@ -194,36 +138,30 @@ ${u.usuario}
 }
 
 /* FUNCIONES */
-function toggleServicio(n){
+function toggleServicio(n,p){
 if(serviciosSel.includes(n)){
-serviciosSel=serviciosSel.filter(s=>s!==n);
+serviciosSel=serviciosSel.filter(x=>x!==n);
 }else{
 serviciosSel.push(n);
 }
-init();
+cargar();
 }
 
-function agregarProd(id){
-carrito[id]=(carrito[id]||0)+1;
-alert("Producto agregado");
+async function guardar(){
+await db.collection("ventas").add({
+servicios:serviciosSel,
+barbero:usuarioActivo.usuario,
+total:0,
+fecha:new Date()
+});
+alert("guardado");
 }
 
-/* CRUD */
 async function crearServicio(){
 await db.collection("servicios").add({
 nombre:nombreServicio.value,
 precio:Number(precioServicio.value)
 });
-}
-
-async function editarServicio(id,n,p){
-let nn=prompt("Nombre",n);
-let np=prompt("Precio",p);
-await db.collection("servicios").doc(id).update({nombre:nn,precio:Number(np)});
-}
-
-async function eliminarServicio(id){
-await db.collection("servicios").doc(id).delete();
 }
 
 async function crearProducto(){
@@ -238,23 +176,18 @@ async function crearUsuario(){
 await db.collection("usuarios").add({
 usuario:nuevoUser.value,
 password:nuevoPass.value,
-rol:nuevoRol.value
+rol:nuevoRol.value,
+comision:Number(comisionInput.value)
 });
 }
 
-async function eliminarUsuario(id){
-await db.collection("usuarios").doc(id).delete();
-}
-
-/* GUARDAR */
-async function guardar(){
-await db.collection("ventas").add({
-cliente:cliente.value,
-servicios:serviciosSel,
-productos:carrito,
-fecha:new Date()
+async function generarReporte(){
+let snap=await db.collection("ventas").get();
+tabla.innerHTML="";
+snap.forEach(doc=>{
+let v=doc.data();
+tabla.innerHTML+=v.barbero+"<br>";
 });
-alert("Guardado");
 }
 
 </script>
