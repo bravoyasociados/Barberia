@@ -3,49 +3,55 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>King’s Barber</title>
+<title>Barber Pro</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
-body{margin:0;font-family:'Segoe UI';background:#111;color:#fff}
-.container{padding:15px}
+body{margin:0;font-family:sans-serif;background:#111;color:#fff}
 .hidden{display:none}
-.menu{display:flex;justify-content:space-around;margin:10px 0}
-.menu-item{cursor:pointer;text-align:center}
-.menu-item.active{color:#00e676}
-.seccion{display:none}
+
+.menu{display:flex;gap:10px;padding:10px;background:#222}
+.menu button{flex:1;padding:10px}
+
+.seccion{display:none;padding:10px}
 .seccion.activa{display:block}
-.card{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px}
-.servicio{padding:10px;border:1px solid #444;margin:5px;border-radius:10px}
+
+.servicio{border:1px solid #444;padding:10px;margin:5px;border-radius:10px}
 .servicio.activo{background:#00c853;color:#000}
-.producto{margin:5px;padding:10px;background:#222;border-radius:10px}
+
+.producto{border:1px solid #444;padding:10px;margin:5px;border-radius:10px}
+.controls{display:flex;justify-content:space-between;margin-top:5px}
 </style>
 </head>
 
 <body>
 
-<div id="pantallaLogin">
-<input id="user" placeholder="usuario">
-<input id="pass" placeholder="password">
+<!-- LOGIN -->
+<div id="loginBox">
+<input id="user" placeholder="Usuario">
+<input id="pass" type="password" placeholder="Password">
 <button onclick="login()">Entrar</button>
 </div>
 
+<!-- APP -->
 <div id="app" class="hidden">
 
 <div class="menu">
-<div class="menu-item active" onclick="mostrarSeccion('ventas',this)">Ventas</div>
-<div class="menu-item admin" onclick="mostrarSeccion('servicios',this)">Servicios</div>
-<div class="menu-item admin" onclick="mostrarSeccion('productos',this)">Productos</div>
-<div class="menu-item admin" onclick="mostrarSeccion('usuarios',this)">Usuarios</div>
-<div class="menu-item admin" onclick="mostrarSeccion('reportes',this)">Reportes</div>
+<button onclick="mostrar('ventas')">Ventas</button>
+<button onclick="mostrar('servicios')">Servicios</button>
+<button onclick="mostrar('productos')">Productos</button>
+<button onclick="mostrar('usuarios')">Usuarios</button>
 </div>
 
 <!-- VENTAS -->
 <div id="ventas" class="seccion activa">
 
+<h3>Servicios</h3>
 <div id="listaServicios"></div>
+
+<h3>Productos</h3>
 <div id="listaProductos"></div>
 
 <button onclick="guardar()">Guardar Venta</button>
@@ -54,114 +60,194 @@ body{margin:0;font-family:'Segoe UI';background:#111;color:#fff}
 
 <!-- SERVICIOS -->
 <div id="servicios" class="seccion">
-<input id="nombreServicio">
-<input id="precioServicio">
+<input id="nombreServicio" placeholder="Nombre">
+<input id="precioServicio" type="number">
 <button onclick="crearServicio()">Agregar</button>
 <div id="adminServicios"></div>
 </div>
 
 <!-- PRODUCTOS -->
 <div id="productos" class="seccion">
-<input id="nombreProd">
-<input id="precioProd">
-<input id="stockProd">
+<input id="nombreProd" placeholder="Nombre">
+<input id="precioProd" type="number">
+<input id="stockProd" type="number">
 <button onclick="crearProducto()">Agregar</button>
 <div id="adminProductos"></div>
 </div>
 
 <!-- USUARIOS -->
 <div id="usuarios" class="seccion">
-<input id="nuevoUser">
-<input id="nuevoPass">
+<input id="nuevoUser" placeholder="Usuario">
+<input id="nuevoPass" placeholder="Password">
 <select id="nuevoRol">
-<option value="admin">admin</option>
-<option value="barbero">barbero</option>
+<option value="admin">Admin</option>
+<option value="barbero">Barbero</option>
 </select>
-<input id="comisionInput">
 <button onclick="crearUsuario()">Crear</button>
 <div id="listaUsuarios"></div>
-</div>
-
-<!-- REPORTES -->
-<div id="reportes" class="seccion">
-<button onclick="generarReporte()">Reporte</button>
-<div id="tabla"></div>
 </div>
 
 </div>
 
 <script>
 
-const firebaseConfig={apiKey:"AIza...",authDomain:"...",projectId:"..."};
-firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
+// 🔥 CONFIG REAL AQUÍ
+const firebaseConfig = {
+apiKey: "TU_API_KEY",
+authDomain: "TU_AUTH_DOMAIN",
+projectId: "TU_PROJECT_ID"
+};
 
-let usuarioActivo={},serviciosSel=[],carrito={},total=0;
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let usuarioActivo = {};
+let serviciosSel = [];
+let carrito = {};
+let total = 0;
 
 /* LOGIN */
 async function login(){
-let snap=await db.collection("usuarios")
+let snap = await db.collection("usuarios")
 .where("usuario","==",user.value)
-.where("password","==",pass.value).get();
+.where("password","==",pass.value)
+.get();
 
-if(snap.empty)return alert("error");
-
-usuarioActivo=snap.docs[0].data();
-
-pantallaLogin.style.display="none";
-app.classList.remove("hidden");
-
-cargar();
+if(snap.empty){
+alert("Error login");
+return;
 }
 
-/* NAV */
-function mostrarSeccion(id,el){
-document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
-document.getElementById(id).classList.add("activa");
+usuarioActivo = snap.docs[0].data();
+
+loginBox.classList.add("hidden");
+app.classList.remove("hidden");
+
+cargarTodo();
 }
 
 /* CARGA */
-function cargar(){
+function cargarTodo(){
 
+// SERVICIOS
 db.collection("servicios").onSnapshot(snap=>{
 listaServicios.innerHTML="";
+adminServicios.innerHTML="";
+
 snap.forEach(doc=>{
-let s=doc.data();
-listaServicios.innerHTML+=`
+let s = doc.data();
+
+listaServicios.innerHTML += `
 <div class="servicio ${serviciosSel.includes(s.nombre)?'activo':''}"
 onclick="toggleServicio('${s.nombre}',${s.precio})">
-${s.nombre}
+${s.nombre} - $${s.precio}
+</div>`;
+
+adminServicios.innerHTML += `
+<div class="producto">
+${s.nombre} - $${s.precio}
+<div class="controls">
+<button onclick="editarServicio('${doc.id}','${s.nombre}',${s.precio})">✏️</button>
+<button onclick="eliminarServicio('${doc.id}')">🗑</button>
+</div>
+</div>`;
+});
+});
+
+// PRODUCTOS
+db.collection("productos").onSnapshot(snap=>{
+listaProductos.innerHTML="";
+adminProductos.innerHTML="";
+
+snap.forEach(doc=>{
+let p = doc.data();
+let c = carrito[doc.id]?.cantidad || 0;
+
+listaProductos.innerHTML += `
+<div class="producto">
+${p.nombre} - $${p.precio} (Stock:${p.stock})
+<div class="controls">
+<button onclick="cambiar('${doc.id}',-1,${p.precio},${p.stock})">-</button>
+<span>${c}</span>
+<button onclick="cambiar('${doc.id}',1,${p.precio},${p.stock})">+</button>
+</div>
+</div>`;
+
+adminProductos.innerHTML += `
+<div class="producto">
+${p.nombre} - $${p.precio}
+<div class="controls">
+<button onclick="editarProducto('${doc.id}','${p.nombre}',${p.precio},${p.stock})">✏️</button>
+<button onclick="eliminarProducto('${doc.id}')">🗑</button>
+</div>
+</div>`;
+});
+});
+
+// USUARIOS
+db.collection("usuarios").onSnapshot(snap=>{
+listaUsuarios.innerHTML="";
+
+snap.forEach(doc=>{
+let u = doc.data();
+
+listaUsuarios.innerHTML += `
+<div class="producto">
+${u.usuario} (${u.rol})
+<div class="controls">
+<button onclick="editarUsuario('${doc.id}','${u.usuario}','${u.password}','${u.rol}')">✏️</button>
+<button onclick="eliminarUsuario('${doc.id}')">🗑</button>
+</div>
 </div>`;
 });
 });
 
 }
 
-/* FUNCIONES */
+/* LÓGICA */
 function toggleServicio(n,p){
 if(serviciosSel.includes(n)){
-serviciosSel=serviciosSel.filter(x=>x!==n);
+serviciosSel = serviciosSel.filter(x=>x!==n);
+total -= p;
 }else{
 serviciosSel.push(n);
+total += p;
 }
-cargar();
-}
-
-async function guardar(){
-await db.collection("ventas").add({
-servicios:serviciosSel,
-barbero:usuarioActivo.usuario,
-total:0,
-fecha:new Date()
-});
-alert("guardado");
 }
 
+/* PRODUCTOS */
+function cambiar(id,d,p,s){
+if(!carrito[id]) carrito[id]={cantidad:0,precio:p};
+
+let n = carrito[id].cantidad + d;
+if(n < 0) n = 0;
+if(n > s) return alert("Sin stock");
+
+total += (n - carrito[id].cantidad) * p;
+carrito[id].cantidad = n;
+}
+
+/* CRUD */
 async function crearServicio(){
 await db.collection("servicios").add({
 nombre:nombreServicio.value,
 precio:Number(precioServicio.value)
 });
+}
+
+async function editarServicio(id,n,p){
+let nn = prompt("Nombre",n);
+let np = prompt("Precio",p);
+if(!nn||!np)return;
+await db.collection("servicios").doc(id).update({
+nombre:nn,precio:Number(np)
+});
+}
+
+async function eliminarServicio(id){
+if(confirm("Eliminar?")){
+await db.collection("servicios").doc(id).delete();
+}
 }
 
 async function crearProducto(){
@@ -172,22 +258,66 @@ stock:Number(stockProd.value)
 });
 }
 
+async function editarProducto(id,n,p,s){
+let nn=prompt("Nombre",n);
+let np=prompt("Precio",p);
+let ns=prompt("Stock",s);
+if(!nn||!np||!ns)return;
+await db.collection("productos").doc(id).update({
+nombre:nn,precio:Number(np),stock:Number(ns)
+});
+}
+
+async function eliminarProducto(id){
+if(confirm("Eliminar?")){
+await db.collection("productos").doc(id).delete();
+}
+}
+
 async function crearUsuario(){
 await db.collection("usuarios").add({
 usuario:nuevoUser.value,
 password:nuevoPass.value,
-rol:nuevoRol.value,
-comision:Number(comisionInput.value)
+rol:nuevoRol.value
 });
 }
 
-async function generarReporte(){
-let snap=await db.collection("ventas").get();
-tabla.innerHTML="";
-snap.forEach(doc=>{
-let v=doc.data();
-tabla.innerHTML+=v.barbero+"<br>";
+async function editarUsuario(id,u,p,r){
+let nu=prompt("Usuario",u);
+let np=prompt("Pass",p);
+let nr=prompt("Rol",r);
+if(!nu||!np||!nr)return;
+await db.collection("usuarios").doc(id).update({
+usuario:nu,password:np,rol:nr
 });
+}
+
+async function eliminarUsuario(id){
+if(confirm("Eliminar?")){
+await db.collection("usuarios").doc(id).delete();
+}
+}
+
+/* GUARDAR */
+async function guardar(){
+await db.collection("ventas").add({
+servicios:serviciosSel,
+productos:carrito,
+total,
+barbero:usuarioActivo.usuario,
+fecha:new Date()
+});
+alert("Venta guardada");
+
+serviciosSel=[];
+carrito={};
+total=0;
+}
+
+/* NAV */
+function mostrar(id){
+document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
+document.getElementById(id).classList.add("activa");
 }
 
 </script>
