@@ -3,68 +3,46 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>King’s Barber</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
+<!-- 📊 GRAFICAS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{margin:0;font-family:'Segoe UI';background:#111;color:#fff}
 .container{padding:15px}
 .hidden{display:none}
-
-/* HEADER */
 .header{display:flex;justify-content:center;position:relative;margin-bottom:15px}
 .logo-mini{position:absolute;left:0}
 .logo-mini img{width:50px;border-radius:50%}
 .titulo{font-size:20px;font-weight:bold}
-
-/* LOGIN */
 .logo-login{width:180px;border-radius:50%;display:block;margin:40px auto;border:4px solid #00c853}
-
-/* MENU */
 .menu{display:flex;justify-content:space-around;margin-bottom:20px}
 .menu-item{text-align:center;cursor:pointer;position:relative}
 .menu-item span{font-size:12px;color:#aaa}
 .menu-item.active span{color:#00e676}
 .menu-item.active::after{content:"";position:absolute;bottom:-5px;left:20%;width:60%;height:3px;background:#00c853}
-
 .icono{width:70px;height:70px;border-radius:50%;background:#1f1f1f;display:flex;align-items:center;justify-content:center;font-size:28px}
-
-/* CARD */
 .card{background:#1f1f1f;border-radius:15px;padding:15px}
-
-/* INPUT */
 input,select{width:100%;padding:10px;margin-top:10px;border-radius:10px;border:none;background:#2a2a2a;color:#fff}
-
-/* BOTON */
 button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;background:#00c853;color:#000}
-
-/* SERVICIOS */
 .servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .servicio{background:#1f1f1f;padding:10px;border-radius:10px;text-align:center;border:1px solid #333}
 .servicio.activo{background:#00c853;color:#000}
-
-/* PRODUCTOS */
 .producto{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px;border:1px solid #333}
 .controls{display:flex;justify-content:space-between;margin-top:5px}
-
-/* TABLA */
-table{border-collapse:collapse;margin-top:10px}
-td,th{padding:8px;border:1px solid #444;text-align:center}
-
-/* LOGOUT */
 .logout-btn{position:fixed;bottom:20px;right:20px;width:65px;height:65px;border-radius:50%;background:red;display:flex;align-items:center;justify-content:center;font-size:26px}
-
 .seccion{display:none}
 .seccion.activa{display:block}
+canvas{margin-top:15px;background:#fff;border-radius:10px}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div id="pantallaLogin" class="container hidden">
 <img src="icono-192.png" class="logo-login">
 <input id="user" placeholder="Usuario">
@@ -72,7 +50,6 @@ td,th{padding:8px;border:1px solid #444;text-align:center}
 <button onclick="login()">Entrar</button>
 </div>
 
-<!-- APP -->
 <div id="app" class="container hidden">
 
 <div class="header">
@@ -91,10 +68,8 @@ td,th{padding:8px;border:1px solid #444;text-align:center}
 <!-- VENTAS -->
 <div id="ventas" class="seccion card activa">
 <input id="cliente" placeholder="Cliente">
-
 <h4>Servicios</h4>
 <div id="listaServicios" class="servicios-grid"></div>
-
 <h4>Productos</h4>
 <div id="listaProductos"></div>
 
@@ -109,10 +84,18 @@ td,th{padding:8px;border:1px solid #444;text-align:center}
 <button onclick="guardar()">Guardar</button>
 </div>
 
+<!-- SERVICIOS ADMIN -->
+<div id="servicios" class="seccion card">
+<input id="nombreServicio" placeholder="Nombre">
+<input id="precioServicio" type="number">
+<button onclick="crearServicio()">Agregar</button>
+<div id="adminServicios"></div>
+</div>
+
 <!-- REPORTES -->
 <div id="reportes" class="seccion card">
 
-<h3>📊 Reportes</h3>
+<h3>📊 Reportes PRO</h3>
 
 <input type="date" id="fechaInicio">
 <input type="date" id="fechaFin">
@@ -120,22 +103,16 @@ td,th{padding:8px;border:1px solid #444;text-align:center}
 <select id="filtroBarbero"></select>
 
 <button onclick="generarReporte()">Generar</button>
-<button onclick="corteCaja()">Cerrar caja</button>
+<button onclick="exportarExcel()">Exportar Excel</button>
 
 <h4>Total</h4>
 <div id="totalVentas">$0</div>
 
-<table id="tablaDinamica">
-<thead>
-<tr>
-<th>Barbero</th>
-<th>Total</th>
-<th>Servicios</th>
-<th>Productos</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
+<div id="tablaReporte"></div>
+
+<canvas id="graficaBarberos"></canvas>
+<canvas id="graficaServicios"></canvas>
+<canvas id="graficaProductos"></canvas>
 
 </div>
 
@@ -149,23 +126,18 @@ const firebaseConfig={apiKey:"AIzaSy...",authDomain:"barberia-pro-3ca72.firebase
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let usuarioActivo={},carrito={},total=0,serviciosSel=[];
+let usuarioActivo={},serviciosSel=[],carrito={},total=0;
 
-/* SESIÓN */
+/* LOGIN */
 window.onload=()=>{
 let u=localStorage.getItem("usuario");
 if(u) iniciarApp(JSON.parse(u));
 else pantallaLogin.classList.remove("hidden");
 };
 
-/* LOGIN */
 async function login(){
-let snap=await db.collection("usuarios")
-.where("usuario","==",user.value)
-.where("password","==",pass.value).get();
-
+let snap=await db.collection("usuarios").where("usuario","==",user.value).where("password","==",pass.value).get();
 if(snap.empty)return alert("Error");
-
 let usuario=snap.docs[0].data();
 localStorage.setItem("usuario",JSON.stringify(usuario));
 iniciarApp(usuario);
@@ -175,99 +147,101 @@ function iniciarApp(usuario){
 usuarioActivo=usuario;
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
+
+cargarServicios();
+cargarServiciosAdmin();
 cargarBarberos();
 }
 
-/* GUARDAR */
-async function guardar(){
-await db.collection("ventas").add({
-cliente:cliente.value,
-servicios:serviciosSel,
-productos:carrito,
-metodoPago:metodoPago.value,
-total,
-barbero:usuarioActivo.usuario,
-fecha:new Date()
+/* SERVICIOS */
+function cargarServicios(){
+db.collection("servicios").onSnapshot(snap=>{
+listaServicios.innerHTML="";
+snap.forEach(doc=>{
+let s=doc.data();
+listaServicios.innerHTML+=`<div class="servicio" onclick="toggleServicio('${s.nombre}',${s.precio})">${s.nombre}<br>$${s.precio}</div>`;
 });
-alert("Venta guardada");
+});
 }
 
-/* REPORTES */
+function cargarServiciosAdmin(){
+db.collection("servicios").onSnapshot(snap=>{
+adminServicios.innerHTML="";
+snap.forEach(doc=>{
+let s=doc.data();
+adminServicios.innerHTML+=`
+<div class="producto">
+${s.nombre} $${s.precio}
+<div class="controls">
+<button onclick="editarServicio('${doc.id}','${s.nombre}',${s.precio})">✏️</button>
+<button onclick="eliminarServicio('${doc.id}')">🗑</button>
+</div>
+</div>`;
+});
+});
+}
+
+async function editarServicio(id,n,p){
+let nn=prompt("Nombre",n);
+let np=prompt("Precio",p);
+if(!nn||!np)return;
+await db.collection("servicios").doc(id).update({nombre:nn,precio:Number(np)});
+}
+
+async function eliminarServicio(id){
+if(confirm("Eliminar?"))await db.collection("servicios").doc(id).delete();
+}
+
+/* REPORTE PRO */
 async function generarReporte(){
-
-let inicio=new Date(fechaInicio.value);
-let fin=new Date(fechaFin.value);
-fin.setHours(23,59,59);
-
-let filtro=filtroBarbero.value;
 
 let snap=await db.collection("ventas").get();
 
-let total=0;
-let tabla={};
+let porBarbero={},porServicio={},porProducto={},total=0;
 
 snap.forEach(doc=>{
 let v=doc.data();
-let f=v.fecha?.toDate?.()||new Date();
-
-if(f<inicio||f>fin)return;
-if(filtro && v.barbero!==filtro)return;
 
 total+=Number(v.total);
 
-if(!tabla[v.barbero]) tabla[v.barbero]={total:0,servicios:0,productos:0};
+// barbero
+if(!porBarbero[v.barbero]) porBarbero[v.barbero]=0;
+porBarbero[v.barbero]+=Number(v.total);
 
-tabla[v.barbero].total+=Number(v.total);
-tabla[v.barbero].servicios+=(v.servicios||[]).length;
-
-let prod=0;
-for(let id in (v.productos||{})){
-prod+=v.productos[id].cantidad;
-}
-tabla[v.barbero].productos+=prod;
-
+// servicios
+(v.servicios||[]).forEach(s=>{
+if(!porServicio[s]) porServicio[s]=0;
+porServicio[s]++;
 });
 
-let tbody=document.querySelector("#tablaDinamica tbody");
-tbody.innerHTML="";
-
-for(let b in tabla){
-tbody.innerHTML+=`
-<tr>
-<td>${b}</td>
-<td>$${tabla[b].total}</td>
-<td>${tabla[b].servicios}</td>
-<td>${tabla[b].productos}</td>
-</tr>`;
+// productos
+for(let id in (v.productos||{})){
+if(!porProducto[id]) porProducto[id]=0;
+porProducto[id]+=v.productos[id].cantidad;
 }
+
+});
 
 totalVentas.innerHTML="$"+total;
+
+/* GRAFICAS */
+new Chart(graficaBarberos,{type:'bar',data:{labels:Object.keys(porBarbero),datasets:[{data:Object.values(porBarbero)}]}})
+new Chart(graficaServicios,{type:'bar',data:{labels:Object.keys(porServicio),datasets:[{data:Object.values(porServicio)}]}})
+new Chart(graficaProductos,{type:'bar',data:{labels:Object.keys(porProducto),datasets:[{data:Object.values(porProducto)}]}})
+
 }
 
-/* BARBEROS */
-function cargarBarberos(){
-db.collection("usuarios").onSnapshot(snap=>{
-filtroBarbero.innerHTML='<option value="">Todos</option>';
-snap.forEach(doc=>{
-let u=doc.data();
-if(u.rol==="barbero"){
-filtroBarbero.innerHTML+=`<option value="${u.usuario}">${u.usuario}</option>`;
-}
-});
-});
-}
+/* EXCEL */
+function exportarExcel(){
+let csv="tipo,nombre,total\n";
 
-/* CORTE */
-function corteCaja(){
-alert("Corte total: "+totalVentas.innerText);
-}
+document.querySelectorAll("canvas").forEach(()=>{}); // placeholder
 
-/* UI */
-function mostrarSeccion(id,el){
-document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
-document.getElementById(id).classList.add("activa");
-document.querySelectorAll(".menu-item").forEach(m=>m.classList.remove("active"));
-el.classList.add("active");
+let blob=new Blob([csv]);
+let a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="reporte.csv";
+a.click();
 }
 
 function logout(){
