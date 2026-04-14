@@ -291,11 +291,30 @@ cargarTodo();
 }
 
 async function guardar(){
+
 for(let id in carrito){
-await db.collection("productos").doc(id).update({stock:firebase.firestore.FieldValue.increment(-carrito[id].cantidad)});
+await db.collection("productos").doc(id).update({
+stock: firebase.firestore.FieldValue.increment(-carrito[id].cantidad)
+});
 }
-await db.collection("ventas").add({cliente:cliente.value,total});
+
+await db.collection("ventas").add({
+cliente: cliente.value,
+servicios: serviciosSel,
+productos: carrito,
+total: total,
+barbero: usuarioActivo.usuario,
+fecha: new Date() // 🔥 ESTO ES LO IMPORTANTE
+});
+
 alert("Guardado");
+
+// limpiar
+cliente.value="";
+monto.value="";
+carrito={};
+serviciosSel=[];
+total=0;
 }
 
 /* UI */
@@ -441,6 +460,68 @@ a.download = "reporte_rango.csv";
 a.click();
 
 cerrarPanel();
+}
+
+async function descargarRango(){
+
+let inicio = fechaInicio.value ? new Date(fechaInicio.value) : null;
+let fin = fechaFin.value ? new Date(fechaFin.value) : null;
+
+if(!inicio || !fin){
+alert("Selecciona fechas");
+return;
+}
+
+fin.setHours(23,59,59);
+
+let snap = await db.collection("ventas").get();
+
+let tabla = {};
+let totalGlobal = 0;
+
+snap.forEach(doc=>{
+let v = doc.data();
+
+// 🔥 FIX FECHA
+let f;
+if(v.fecha && typeof v.fecha.toDate === "function"){
+f = v.fecha.toDate();
+}else if(v.fecha){
+f = new Date(v.fecha);
+}else{
+return;
+}
+
+if(f < inicio || f > fin) return;
+
+totalGlobal += Number(v.total);
+
+if(!tabla[v.barbero]){
+tabla[v.barbero] = {total:0, servicios:0};
+}
+
+tabla[v.barbero].total += Number(v.total);
+tabla[v.barbero].servicios += (v.servicios || []).length;
+
+});
+
+// CSV
+let csv = "Barbero,Total,Servicios\n";
+
+for(let b in tabla){
+csv += `${b},${tabla[b].total},${tabla[b].servicios}\n`;
+}
+
+csv += `TOTAL,${totalGlobal},\n`;
+
+// descarga
+let blob = new Blob([csv], { type: "text/csv" });
+let url = URL.createObjectURL(blob);
+
+let a = document.createElement("a");
+a.href = url;
+a.download = "reporte.csv";
+a.click();
 }
 
 </script>
