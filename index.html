@@ -3,24 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>King’s Barber</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{margin:0;font-family:'Segoe UI';background:#111;color:#fff}
 .container{padding:15px}
 .hidden{display:none}
 
+/* HEADER */
 .header{display:flex;justify-content:center;position:relative;margin-bottom:15px}
 .logo-mini{position:absolute;left:0}
 .logo-mini img{width:50px;border-radius:50%}
 .titulo{font-size:20px;font-weight:bold}
 
+/* LOGIN */
 .logo-login{width:180px;border-radius:50%;display:block;margin:40px auto;border:4px solid #00c853}
 
+/* MENU */
 .menu{display:flex;justify-content:space-around;margin-bottom:20px}
 .menu-item{text-align:center;cursor:pointer;position:relative}
 .menu-item span{font-size:12px;color:#aaa}
@@ -29,18 +32,29 @@ body{margin:0;font-family:'Segoe UI';background:#111;color:#fff}
 
 .icono{width:70px;height:70px;border-radius:50%;background:#1f1f1f;display:flex;align-items:center;justify-content:center;font-size:28px}
 
+/* CARD */
 .card{background:#1f1f1f;border-radius:15px;padding:15px}
 
+/* INPUT */
 input,select{width:100%;padding:10px;margin-top:10px;border-radius:10px;border:none;background:#2a2a2a;color:#fff}
+
+/* BOTON */
 button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;background:#00c853;color:#000}
 
+/* SERVICIOS */
 .servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .servicio{background:#1f1f1f;padding:10px;border-radius:10px;text-align:center;border:1px solid #333}
 .servicio.activo{background:#00c853;color:#000}
 
+/* PRODUCTOS */
 .producto{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px;border:1px solid #333}
 .controls{display:flex;justify-content:space-between;margin-top:5px}
 
+/* TABLA */
+table{border-collapse:collapse;margin-top:10px}
+td,th{padding:8px;border:1px solid #444;text-align:center}
+
+/* LOGOUT */
 .logout-btn{position:fixed;bottom:20px;right:20px;width:65px;height:65px;border-radius:50%;background:red;display:flex;align-items:center;justify-content:center;font-size:26px}
 
 .seccion{display:none}
@@ -77,8 +91,10 @@ button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;ba
 <!-- VENTAS -->
 <div id="ventas" class="seccion card activa">
 <input id="cliente" placeholder="Cliente">
+
 <h4>Servicios</h4>
 <div id="listaServicios" class="servicios-grid"></div>
+
 <h4>Productos</h4>
 <div id="listaProductos"></div>
 
@@ -93,45 +109,34 @@ button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;ba
 <button onclick="guardar()">Guardar</button>
 </div>
 
-<!-- SERVICIOS -->
-<div id="servicios" class="seccion card">
-<input id="nombreServicio" placeholder="Nombre">
-<input id="precioServicio" type="number" placeholder="Precio">
-<button onclick="crearServicio()">Agregar</button>
-<div id="adminServicios"></div>
-</div>
-
-<!-- PRODUCTOS -->
-<div id="productos" class="seccion card">
-<input id="nombreProd" placeholder="Nombre">
-<input id="precioProd" type="number" placeholder="Precio">
-<input id="stockProd" type="number" placeholder="Stock">
-<button onclick="crearProducto()">Agregar</button>
-<div id="adminProductos"></div>
-</div>
-
-<!-- USUARIOS -->
-<div id="usuarios" class="seccion card">
-<input id="nuevoUser" placeholder="Usuario">
-<input id="nuevoPass" placeholder="Contraseña">
-<select id="nuevoRol">
-<option value="barbero">Barbero</option>
-<option value="admin">Admin</option>
-</select>
-<button onclick="crearUsuario()">Crear</button>
-<div id="listaUsuarios"></div>
-</div>
-
 <!-- REPORTES -->
 <div id="reportes" class="seccion card">
+
 <h3>📊 Reportes</h3>
 
-<button onclick="generarReporte()">Generar</button>
-<button onclick="exportarExcel()">Exportar Excel</button>
+<input type="date" id="fechaInicio">
+<input type="date" id="fechaFin">
 
+<select id="filtroBarbero"></select>
+
+<button onclick="generarReporte()">Generar</button>
+<button onclick="corteCaja()">Cerrar caja</button>
+
+<h4>Total</h4>
 <div id="totalVentas">$0</div>
-<div id="tablaReporte"></div>
-<canvas id="graficaVentas"></canvas>
+
+<table id="tablaDinamica">
+<thead>
+<tr>
+<th>Barbero</th>
+<th>Total</th>
+<th>Servicios</th>
+<th>Productos</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
 </div>
 
 </div>
@@ -155,131 +160,106 @@ else pantallaLogin.classList.remove("hidden");
 
 /* LOGIN */
 async function login(){
-let snap=await db.collection("usuarios").where("usuario","==",user.value).where("password","==",pass.value).get();
+let snap=await db.collection("usuarios")
+.where("usuario","==",user.value)
+.where("password","==",pass.value).get();
+
 if(snap.empty)return alert("Error");
+
 let usuario=snap.docs[0].data();
 localStorage.setItem("usuario",JSON.stringify(usuario));
 iniciarApp(usuario);
 }
 
-/* INICIAR */
 function iniciarApp(usuario){
 usuarioActivo=usuario;
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
-
-if(usuario.rol!=="admin"){
-document.querySelectorAll(".admin").forEach(e=>e.style.display="none");
-}
-
-cargarTodo();
-}
-
-/* 🔥 CARGAR TODO (CLAVE) */
-function cargarTodo(){
-
-db.collection("servicios").onSnapshot(snap=>{
-listaServicios.innerHTML="";
-snap.forEach(doc=>{
-let s=doc.data();
-let activo=serviciosSel.includes(s.nombre);
-
-listaServicios.innerHTML+=`
-<div class="servicio ${activo?'activo':''}"
-onclick="toggleServicio('${s.nombre}',${s.precio})">
-${s.nombre}<br>$${s.precio}
-</div>`;
-});
-});
-
-db.collection("productos").onSnapshot(snap=>{
-listaProductos.innerHTML="";
-snap.forEach(doc=>{
-let p=doc.data();
-let c=carrito[doc.id]?.cantidad||0;
-
-listaProductos.innerHTML+=`
-<div class="producto">
-${p.nombre} - $${p.precio} (Stock:${p.stock})
-<div class="controls">
-<button onclick="cambiar('${doc.id}',-1,${p.precio},${p.stock})">-</button>
-<span>${c}</span>
-<button onclick="cambiar('${doc.id}',1,${p.precio},${p.stock})">+</button>
-</div>
-</div>`;
-});
-});
-
-}
-
-/* LÓGICA */
-function toggleServicio(n,p){
-if(serviciosSel.includes(n)){serviciosSel=serviciosSel.filter(s=>s!==n);total-=p;}
-else{serviciosSel.push(n);total+=p;}
-monto.value=total;
-cargarTodo();
-}
-
-function cambiar(id,d,p,s){
-if(!carrito[id])carrito[id]={cantidad:0,precio:p};
-let n=carrito[id].cantidad+d;
-if(n<0)n=0;if(n>s)return alert("Sin stock");
-total+=(n-carrito[id].cantidad)*p;
-carrito[id].cantidad=n;
-monto.value=total;
-cargarTodo();
+cargarBarberos();
 }
 
 /* GUARDAR */
 async function guardar(){
 await db.collection("ventas").add({
+cliente:cliente.value,
+servicios:serviciosSel,
+productos:carrito,
+metodoPago:metodoPago.value,
 total,
 barbero:usuarioActivo.usuario,
 fecha:new Date()
 });
-alert("Guardado");
+alert("Venta guardada");
 }
 
 /* REPORTES */
 async function generarReporte(){
 
+let inicio=new Date(fechaInicio.value);
+let fin=new Date(fechaFin.value);
+fin.setHours(23,59,59);
+
+let filtro=filtroBarbero.value;
+
 let snap=await db.collection("ventas").get();
 
 let total=0;
-let porBarbero={};
+let tabla={};
 
 snap.forEach(doc=>{
 let v=doc.data();
+let f=v.fecha?.toDate?.()||new Date();
+
+if(f<inicio||f>fin)return;
+if(filtro && v.barbero!==filtro)return;
+
 total+=Number(v.total);
 
-if(!porBarbero[v.barbero]) porBarbero[v.barbero]=0;
-porBarbero[v.barbero]+=Number(v.total);
+if(!tabla[v.barbero]) tabla[v.barbero]={total:0,servicios:0,productos:0};
+
+tabla[v.barbero].total+=Number(v.total);
+tabla[v.barbero].servicios+=(v.servicios||[]).length;
+
+let prod=0;
+for(let id in (v.productos||{})){
+prod+=v.productos[id].cantidad;
+}
+tabla[v.barbero].productos+=prod;
+
 });
+
+let tbody=document.querySelector("#tablaDinamica tbody");
+tbody.innerHTML="";
+
+for(let b in tabla){
+tbody.innerHTML+=`
+<tr>
+<td>${b}</td>
+<td>$${tabla[b].total}</td>
+<td>${tabla[b].servicios}</td>
+<td>${tabla[b].productos}</td>
+</tr>`;
+}
 
 totalVentas.innerHTML="$"+total;
-
-tablaReporte.innerHTML="";
-for(let b in porBarbero){
-tablaReporte.innerHTML+=`<div class="producto">${b}: $${porBarbero[b]}</div>`;
 }
 
-new Chart(graficaVentas,{
-type:'bar',
-data:{labels:Object.keys(porBarbero),datasets:[{data:Object.values(porBarbero)}]}
+/* BARBEROS */
+function cargarBarberos(){
+db.collection("usuarios").onSnapshot(snap=>{
+filtroBarbero.innerHTML='<option value="">Todos</option>';
+snap.forEach(doc=>{
+let u=doc.data();
+if(u.rol==="barbero"){
+filtroBarbero.innerHTML+=`<option value="${u.usuario}">${u.usuario}</option>`;
+}
+});
 });
 }
 
-/* EXCEL */
-function exportarExcel(){
-let texto="Barbero,Total\n";
-document.querySelectorAll("#tablaReporte .producto").forEach(el=>{
-texto+=el.innerText.replace(":"," ,")+"\n";
-});
-let blob=new Blob([texto]);
-let a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="reporte.csv";
-a.click();
+/* CORTE */
+function corteCaja(){
+alert("Corte total: "+totalVentas.innerText);
 }
 
 /* UI */
