@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>King’s Barber</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -13,35 +14,20 @@ body{margin:0;font-family:'Segoe UI';background:#111;color:#fff}
 .container{padding:15px}
 .hidden{display:none}
 
-.header{display:flex;justify-content:center;position:relative;margin-bottom:15px}
-.logo-mini{position:absolute;left:0}
-.logo-mini img{width:50px;border-radius:50%}
-.titulo{font-size:20px;font-weight:bold}
+.header{text-align:center;margin-bottom:15px}
+.logo{width:60px;border-radius:50%}
+.menu{display:flex;justify-content:space-around;margin:20px 0}
+.menu div{cursor:pointer;text-align:center}
+.active{color:#00e676}
 
-.logo-login{width:180px;border-radius:50%;display:block;margin:40px auto;border:4px solid #00c853}
+.card{background:#1f1f1f;padding:15px;border-radius:10px}
+input,select,button{width:100%;margin-top:10px;padding:10px;border-radius:10px;border:none}
+button{background:#00c853}
 
-.menu{display:flex;justify-content:space-around;margin-bottom:20px}
-.menu-item{text-align:center;cursor:pointer}
-.menu-item span{font-size:12px;color:#aaa}
-.menu-item.active span{color:#00e676}
-
-.icono{width:70px;height:70px;border-radius:50%;background:#1f1f1f;display:flex;align-items:center;justify-content:center;font-size:28px}
-
-.card{background:#1f1f1f;border-radius:15px;padding:15px;margin-top:10px}
-input,select{width:100%;padding:10px;margin-top:10px;border-radius:10px;border:none;background:#2a2a2a;color:#fff}
-button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;background:#00c853;color:#000}
-
-.servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.servicio{background:#1f1f1f;padding:10px;border-radius:10px;text-align:center}
+.servicio{padding:10px;margin:5px;background:#333;border-radius:8px;cursor:pointer}
 .servicio.activo{background:#00c853;color:#000}
 
-.producto{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px}
-.controls{display:flex;justify-content:space-between}
-
-table{width:100%;margin-top:10px;border-collapse:collapse}
-td,th{border:1px solid #444;padding:8px;text-align:center}
-
-.logout-btn{position:fixed;bottom:20px;right:20px;width:65px;height:65px;border-radius:50%;background:red;display:flex;align-items:center;justify-content:center;font-size:26px}
+.producto{margin-top:10px;padding:10px;background:#333;border-radius:8px}
 
 .seccion{display:none}
 .seccion.activa{display:block}
@@ -50,111 +36,63 @@ td,th{border:1px solid #444;padding:8px;text-align:center}
 
 <body>
 
-<div id="pantallaLogin" class="container hidden">
-<img src="icono-192.png" class="logo-login">
+<div id="login" class="container">
 <input id="user" placeholder="Usuario">
-<input id="pass" type="password" placeholder="Contraseña">
+<input id="pass" type="password" placeholder="Password">
 <button onclick="login()">Entrar</button>
 </div>
 
 <div id="app" class="container hidden">
 
 <div class="header">
-<div class="logo-mini"><img src="icono-192.png"></div>
-<div class="titulo">King’s Barber</div>
+<h2>King’s Barber</h2>
 </div>
 
 <div class="menu">
-<div class="menu-item active" onclick="mostrarSeccion('ventas',this)"><div class="icono">💰</div><span>Ventas</span></div>
-<div class="menu-item admin" onclick="mostrarSeccion('servicios',this)"><div class="icono">✂️</div><span>Servicios</span></div>
-<div class="menu-item admin" onclick="mostrarSeccion('productos',this)"><div class="icono">📦</div><span>Productos</span></div>
-<div class="menu-item admin" onclick="mostrarSeccion('usuarios',this)"><div class="icono">👑</div><span>Usuarios</span></div>
-<div class="menu-item admin" onclick="mostrarSeccion('reportes',this)"><div class="icono">📊</div><span>Reportes</span></div>
+<div onclick="nav('ventas')">💰</div>
+<div onclick="nav('servicios')">✂️</div>
+<div onclick="nav('productos')">📦</div>
+<div onclick="nav('usuarios')">👑</div>
 </div>
 
-<!-- VENTAS -->
-<div id="ventas" class="seccion card activa">
+<div id="ventas" class="seccion activa card">
 <input id="cliente" placeholder="Cliente">
-
 <h4>Servicios</h4>
-<div id="listaServicios" class="servicios-grid"></div>
+<div id="serviciosList"></div>
 
 <h4>Productos</h4>
-<div id="listaProductos"></div>
+<div id="productosList"></div>
 
-<select id="metodoPago">
-<option value="">Método</option>
-<option value="efectivo">Efectivo</option>
-<option value="tarjeta">Tarjeta</option>
-<option value="transferencia">Transferencia</option>
-</select>
-
-<input id="monto" placeholder="Total">
-<button onclick="guardar()">Guardar</button>
+<button onclick="guardar()">Guardar Venta</button>
 </div>
 
-<!-- SERVICIOS -->
 <div id="servicios" class="seccion card">
-<input id="nombreServicio" placeholder="Nombre">
-<input id="precioServicio" type="number">
+<input id="nombreServicio">
+<input id="precioServicio">
 <button onclick="crearServicio()">Agregar</button>
-<div id="adminServicios"></div>
+<div id="serviciosAdmin"></div>
 </div>
 
-<!-- PRODUCTOS -->
 <div id="productos" class="seccion card">
-<input id="nombreProd" placeholder="Nombre">
-<input id="precioProd" type="number">
-<input id="stockProd" type="number">
+<input id="nombreProd">
+<input id="precioProd">
+<input id="stockProd">
 <button onclick="crearProducto()">Agregar</button>
-<div id="adminProductos"></div>
+<div id="productosAdmin"></div>
 </div>
 
-<!-- USUARIOS -->
 <div id="usuarios" class="seccion card">
-<input id="nuevoUser" placeholder="Usuario">
-<input id="nuevoPass" placeholder="Contraseña">
-
+<input id="nuevoUser">
+<input id="nuevoPass">
 <select id="nuevoRol">
-<option value="barbero">Barbero</option>
-<option value="admin">Admin</option>
+<option value="admin">admin</option>
+<option value="barbero">barbero</option>
 </select>
-
-<input id="comisionInput" type="number" placeholder="Comisión por servicio">
-
 <button onclick="crearUsuario()">Crear</button>
-
-<div id="listaUsuarios"></div>
-</div>
-
-<!-- REPORTES -->
-<div id="reportes" class="seccion card">
-
-<input type="date" id="fechaInicio">
-<input type="date" id="fechaFin">
-
-<button onclick="generarReporte()">Generar</button>
-<button onclick="exportarExcel()">Exportar Excel</button>
-
-<div id="totalVentas">$0</div>
-
-<table id="tablaDinamica">
-<thead>
-<tr>
-<th>Barbero</th>
-<th>Total</th>
-<th>Servicios</th>
-<th>Comisión</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-
+<div id="usuariosList"></div>
 </div>
 
 </div>
-
-<div class="logout-btn" onclick="logout()">🚪</div>
 
 <script>
 
@@ -162,122 +100,162 @@ const firebaseConfig={apiKey:"AIzaSy...",authDomain:"barberia-pro-3ca72.firebase
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let usuarioActivo={},carrito={},serviciosSel=[],total=0;
+let usuarioActivo=null;
+let serviciosSel=[];
+let carrito={};
 
 /* LOGIN */
-window.onload=()=>{
-let u=localStorage.getItem("usuario");
-if(u) iniciarApp(JSON.parse(u));
-else pantallaLogin.classList.remove("hidden");
-};
-
 async function login(){
 let snap=await db.collection("usuarios")
 .where("usuario","==",user.value)
-.where("password","==",pass.value).get();
+.where("password","==",pass.value)
+.get();
 
 if(snap.empty)return alert("Error");
 
-let usuario=snap.docs[0].data();
-localStorage.setItem("usuario",JSON.stringify(usuario));
-iniciarApp(usuario);
-}
+usuarioActivo=snap.docs[0].data();
 
-function iniciarApp(usuario){
-usuarioActivo=usuario;
-pantallaLogin.style.display="none";
+login.style.display="none";
 app.classList.remove("hidden");
 
-if(usuario.rol==="barbero"){
-document.querySelectorAll(".admin").forEach(e=>e.style.display="none");
+init();
 }
 
-cargarTodo();
+/* NAV */
+function nav(id){
+document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
+document.getElementById(id).classList.add("activa");
 }
 
-/* 🔥 SINCRONIZACIÓN BIEN HECHA */
-function cargarTodo(){
+/* INIT */
+function init(){
 
 // SERVICIOS
 db.collection("servicios").onSnapshot(snap=>{
-listaServicios.innerHTML="";
-adminServicios.innerHTML="";
+serviciosList.innerHTML="";
+serviciosAdmin.innerHTML="";
 
 snap.forEach(doc=>{
 let s=doc.data();
 
-listaServicios.innerHTML+=`
+// selección
+serviciosList.innerHTML+=`
 <div class="servicio ${serviciosSel.includes(s.nombre)?'activo':''}"
-onclick="toggleServicio('${s.nombre}',${s.precio})">
-${s.nombre}<br>$${s.precio}
+onclick="toggleServicio('${s.nombre}')">
+${s.nombre} - $${s.precio}
 </div>`;
 
-adminServicios.innerHTML+=`
+// admin
+serviciosAdmin.innerHTML+=`
 <div class="producto">
 ${s.nombre} $${s.precio}
-<div class="controls">
 <button onclick="editarServicio('${doc.id}','${s.nombre}',${s.precio})">✏️</button>
 <button onclick="eliminarServicio('${doc.id}')">🗑</button>
-</div>
 </div>`;
 });
-
 });
 
 // PRODUCTOS
 db.collection("productos").onSnapshot(snap=>{
-listaProductos.innerHTML="";
-adminProductos.innerHTML="";
+productosList.innerHTML="";
+productosAdmin.innerHTML="";
 
 snap.forEach(doc=>{
 let p=doc.data();
-let c=carrito[doc.id]?.cantidad||0;
 
-listaProductos.innerHTML+=`
-<div class="producto">
-${p.nombre} $${p.precio} (Stock:${p.stock})
-<div class="controls">
-<button onclick="cambiar('${doc.id}',-1,${p.precio},${p.stock})">-</button>
-<span>${c}</span>
-<button onclick="cambiar('${doc.id}',1,${p.precio},${p.stock})">+</button>
-</div>
-</div>`;
-
-adminProductos.innerHTML+=`
+productosList.innerHTML+=`
 <div class="producto">
 ${p.nombre} $${p.precio}
-<div class="controls">
-<button onclick="editarProducto('${doc.id}','${p.nombre}',${p.precio},${p.stock})">✏️</button>
-<button onclick="eliminarProducto('${doc.id}')">🗑</button>
-</div>
+<button onclick="agregarProd('${doc.id}')">+</button>
+</div>`;
+
+productosAdmin.innerHTML+=`
+<div class="producto">
+${p.nombre}
+<button onclick="editarProducto('${doc.id}','${p.nombre}')">✏️</button>
 </div>`;
 });
-
 });
 
 // USUARIOS
 db.collection("usuarios").onSnapshot(snap=>{
-listaUsuarios.innerHTML="";
-
+usuariosList.innerHTML="";
 snap.forEach(doc=>{
 let u=doc.data();
 
-listaUsuarios.innerHTML+=`
+usuariosList.innerHTML+=`
 <div class="producto">
-${u.usuario} (${u.rol}) - $${u.comision||0}
-<div class="controls">
-<button onclick="editarUsuario('${doc.id}','${u.usuario}','${u.password}','${u.rol}',${u.comision||0})">✏️</button>
+${u.usuario}
 <button onclick="eliminarUsuario('${doc.id}')">🗑</button>
-</div>
 </div>`;
 });
-
 });
 
 }
 
-/* FUNCIONES CRUD Y LÓGICA (YA ESTABLES) */
-// (ya están correctas, no se tocan más)
+/* FUNCIONES */
+function toggleServicio(n){
+if(serviciosSel.includes(n)){
+serviciosSel=serviciosSel.filter(s=>s!==n);
+}else{
+serviciosSel.push(n);
+}
+init();
+}
+
+function agregarProd(id){
+carrito[id]=(carrito[id]||0)+1;
+alert("Producto agregado");
+}
+
+/* CRUD */
+async function crearServicio(){
+await db.collection("servicios").add({
+nombre:nombreServicio.value,
+precio:Number(precioServicio.value)
+});
+}
+
+async function editarServicio(id,n,p){
+let nn=prompt("Nombre",n);
+let np=prompt("Precio",p);
+await db.collection("servicios").doc(id).update({nombre:nn,precio:Number(np)});
+}
+
+async function eliminarServicio(id){
+await db.collection("servicios").doc(id).delete();
+}
+
+async function crearProducto(){
+await db.collection("productos").add({
+nombre:nombreProd.value,
+precio:Number(precioProd.value),
+stock:Number(stockProd.value)
+});
+}
+
+async function crearUsuario(){
+await db.collection("usuarios").add({
+usuario:nuevoUser.value,
+password:nuevoPass.value,
+rol:nuevoRol.value
+});
+}
+
+async function eliminarUsuario(id){
+await db.collection("usuarios").doc(id).delete();
+}
+
+/* GUARDAR */
+async function guardar(){
+await db.collection("ventas").add({
+cliente:cliente.value,
+servicios:serviciosSel,
+productos:carrito,
+fecha:new Date()
+});
+alert("Guardado");
+}
 
 </script>
 
