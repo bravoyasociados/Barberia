@@ -148,14 +148,11 @@ const db=firebase.firestore();
 
 let usuarioActivo={},carrito={},total=0,serviciosSel=[];
 
-/* 🔥 SESIÓN PERSISTENTE (ARREGLADA) */
+/* SESIÓN */
 window.onload=()=>{
 let u=localStorage.getItem("usuario");
-if(u){
-iniciarApp(JSON.parse(u));
-}else{
-pantallaLogin.classList.remove("hidden");
-}
+if(u) iniciarApp(JSON.parse(u));
+else pantallaLogin.classList.remove("hidden");
 };
 
 /* LOGIN */
@@ -223,6 +220,18 @@ async function eliminarProducto(id){
 if(confirm("Eliminar?"))await db.collection("productos").doc(id).delete();
 }
 
+async function editarUsuario(id,u,p,r){
+let nu=prompt("Usuario",u);
+let np=prompt("Password",p);
+let nr=prompt("Rol",r);
+if(!nu||!np||!nr)return;
+await db.collection("usuarios").doc(id).update({usuario:nu,password:np,rol:nr});
+}
+
+async function eliminarUsuario(id){
+if(confirm("Eliminar usuario?"))await db.collection("usuarios").doc(id).delete();
+}
+
 /* CARGAR */
 function cargarTodo(){
 
@@ -256,7 +265,7 @@ db.collection("usuarios").onSnapshot(snap=>{
 listaUsuarios.innerHTML="";
 snap.forEach(doc=>{
 let u=doc.data();
-listaUsuarios.innerHTML+=`<div>${u.usuario} - ${u.rol}</div>`;
+listaUsuarios.innerHTML+=`<div class="producto">${u.usuario} - ${u.rol}<div class="controls"><button onclick="editarUsuario('${doc.id}','${u.usuario}','${u.password}','${u.rol}')">✏️</button><button onclick="eliminarUsuario('${doc.id}')">🗑</button></div></div>`;
 });
 });
 
@@ -267,6 +276,7 @@ function toggleServicio(n,p){
 if(serviciosSel.includes(n)){serviciosSel=serviciosSel.filter(s=>s!==n);total-=p;}
 else{serviciosSel.push(n);total+=p;}
 monto.value=total;
+cargarTodo();
 }
 
 function cambiar(id,d,p,s){
@@ -277,13 +287,12 @@ if(n>s)return alert("Sin stock");
 total+=(n-carrito[id].cantidad)*p;
 carrito[id].cantidad=n;
 monto.value=total;
+cargarTodo();
 }
 
 async function guardar(){
 for(let id in carrito){
-await db.collection("productos").doc(id).update({
-stock:firebase.firestore.FieldValue.increment(-carrito[id].cantidad)
-});
+await db.collection("productos").doc(id).update({stock:firebase.firestore.FieldValue.increment(-carrito[id].cantidad)});
 }
 await db.collection("ventas").add({cliente:cliente.value,total});
 alert("Guardado");
