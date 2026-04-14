@@ -13,12 +13,21 @@ body{margin:0;font-family:'Segoe UI';background:linear-gradient(135deg,#0f0f0f,#
 .container{padding:15px}
 .hidden{display:none}
 
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:15px}
+.logo-mini{position:absolute;left:0}
+.logo-mini img{width:50px;height:50px;border-radius:50%}
+.titulo{font-size:20px;font-weight:bold}
+
 /* LOGIN */
 .logo-login{width:180px;height:180px;border-radius:50%;display:block;margin:40px auto;border:4px solid #00c853;box-shadow:0 0 25px #00c853}
 
 /* MENU */
 .menu{display:flex;justify-content:space-around;margin-bottom:20px}
-.menu-item{text-align:center;cursor:pointer}
+.menu-item{text-align:center;cursor:pointer;position:relative}
+.menu-item span{font-size:12px;color:#aaa}
+.menu-item.active span{color:#00e676}
+.menu-item.active::after{content:"";position:absolute;bottom:-5px;left:20%;width:60%;height:3px;background:#00c853;border-radius:3px}
 .icono{width:70px;height:70px;border-radius:50%;background:#1f1f1f;display:flex;align-items:center;justify-content:center;font-size:28px}
 
 /* CARD */
@@ -32,11 +41,11 @@ button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;ba
 
 /* SERVICIOS */
 .servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.servicio{background:#1f1f1f;padding:10px;border-radius:10px;text-align:center}
+.servicio{background:#1f1f1f;padding:10px;border-radius:10px;text-align:center;border:1px solid #333}
 .servicio.activo{background:#00c853;color:#000}
 
 /* PRODUCTOS */
-.producto{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px}
+.producto{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px;border:1px solid #333}
 .controls{display:flex;justify-content:space-between;margin-top:5px}
 .controls button{width:40px}
 
@@ -50,26 +59,38 @@ button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;ba
 
 <body>
 
-<div id="pantallaLogin" class="container">
+<!-- LOGIN -->
+<div id="pantallaLogin" class="container hidden">
 <img src="icono-192.png" class="logo-login">
 <input id="user" placeholder="Usuario">
 <input id="pass" type="password" placeholder="Contraseña">
 <button onclick="login()">Entrar</button>
 </div>
 
+<!-- APP -->
 <div id="app" class="container hidden">
 
+<div class="header">
+<div class="logo-mini"><img src="icono-192.png"></div>
+<div class="titulo">King’s Barber</div>
+</div>
+
 <div class="menu">
-<div onclick="mostrarSeccion('ventas')"><div class="icono">💰</div></div>
-<div class="admin" onclick="mostrarSeccion('servicios')"><div class="icono">✂️</div></div>
-<div class="admin" onclick="mostrarSeccion('productos')"><div class="icono">📦</div></div>
-<div class="admin" onclick="mostrarSeccion('usuarios')"><div class="icono">👑</div></div>
+<div class="menu-item active" onclick="mostrarSeccion('ventas',this)"><div class="icono">💰</div><span>Ventas</span></div>
+<div class="menu-item admin" onclick="mostrarSeccion('servicios',this)"><div class="icono">✂️</div><span>Servicios</span></div>
+<div class="menu-item admin" onclick="mostrarSeccion('productos',this)"><div class="icono">📦</div><span>Productos</span></div>
+<div class="menu-item admin" onclick="mostrarSeccion('usuarios',this)"><div class="icono">👑</div><span>Usuarios</span></div>
 </div>
 
 <!-- VENTAS -->
 <div id="ventas" class="seccion card activa">
+<h3>💰 Ventas</h3>
 <input id="cliente" placeholder="Cliente">
+
+<h4>Servicios</h4>
 <div id="listaServicios" class="servicios-grid"></div>
+
+<h4>Productos</h4>
 <div id="listaProductos"></div>
 
 <select id="metodoPago">
@@ -85,23 +106,26 @@ button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;ba
 
 <!-- SERVICIOS -->
 <div id="servicios" class="seccion card">
+<h3>✂️ Servicios</h3>
 <input id="nombreServicio" placeholder="Nombre">
-<input id="precioServicio" type="number">
+<input id="precioServicio" type="number" placeholder="Precio">
 <button onclick="crearServicio()">Agregar</button>
 <div id="adminServicios"></div>
 </div>
 
 <!-- PRODUCTOS -->
 <div id="productos" class="seccion card">
+<h3>📦 Productos</h3>
 <input id="nombreProd" placeholder="Nombre">
-<input id="precioProd" type="number">
-<input id="stockProd" type="number">
+<input id="precioProd" type="number" placeholder="Precio">
+<input id="stockProd" type="number" placeholder="Stock">
 <button onclick="crearProducto()">Agregar</button>
 <div id="adminProductos"></div>
 </div>
 
 <!-- USUARIOS -->
 <div id="usuarios" class="seccion card">
+<h3>👑 Usuarios</h3>
 <input id="nuevoUser" placeholder="Usuario">
 <input id="nuevoPass" placeholder="Contraseña">
 <select id="nuevoRol">
@@ -124,34 +148,58 @@ const db=firebase.firestore();
 
 let usuarioActivo={},carrito={},total=0,serviciosSel=[];
 
+/* 🔥 SESIÓN PERSISTENTE (ARREGLADA) */
+window.onload=()=>{
+let u=localStorage.getItem("usuario");
+if(u){
+iniciarApp(JSON.parse(u));
+}else{
+pantallaLogin.classList.remove("hidden");
+}
+};
+
 /* LOGIN */
 async function login(){
 let snap=await db.collection("usuarios").where("usuario","==",user.value).where("password","==",pass.value).get();
 if(snap.empty)return alert("Error");
-usuarioActivo=snap.docs[0].data();
+let usuario=snap.docs[0].data();
+localStorage.setItem("usuario",JSON.stringify(usuario));
+iniciarApp(usuario);
+}
+
+/* INICIAR */
+function iniciarApp(usuario){
+usuarioActivo=usuario;
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
-if(usuarioActivo.rol!=="admin")document.querySelectorAll(".admin").forEach(e=>e.style.display="none");
+
+if(usuario.rol!=="admin"){
+document.querySelectorAll(".admin").forEach(e=>e.style.display="none");
+}
+
 cargarTodo();
 }
 
 /* CRUD */
 async function crearServicio(){
+if(!nombreServicio.value||!precioServicio.value)return;
 await db.collection("servicios").add({nombre:nombreServicio.value,precio:Number(precioServicio.value)});
 nombreServicio.value="";precioServicio.value="";
 }
 
 async function crearProducto(){
+if(!nombreProd.value||!precioProd.value||!stockProd.value)return;
 await db.collection("productos").add({nombre:nombreProd.value,precio:Number(precioProd.value),stock:Number(stockProd.value)});
 nombreProd.value="";precioProd.value="";stockProd.value="";
 }
 
 async function crearUsuario(){
+if(!nuevoUser.value||!nuevoPass.value)return;
 await db.collection("usuarios").add({usuario:nuevoUser.value,password:nuevoPass.value,rol:nuevoRol.value});
 nuevoUser.value="";nuevoPass.value="";
 }
 
-/* EDITAR / ELIMINAR */
+/* EDITAR */
 async function editarServicio(id,n,p){
 let nn=prompt("Nombre",n);
 let np=prompt("Precio",p);
@@ -183,7 +231,10 @@ listaServicios.innerHTML="";
 adminServicios.innerHTML="";
 snap.forEach(doc=>{
 let s=doc.data();
-listaServicios.innerHTML+=`<div class="servicio" onclick="toggleServicio('${s.nombre}',${s.precio})">${s.nombre}<br>$${s.precio}</div>`;
+let activo=serviciosSel.includes(s.nombre);
+
+listaServicios.innerHTML+=`<div class="servicio ${activo?'activo':''}" onclick="toggleServicio('${s.nombre}',${s.precio})">${s.nombre}<br>$${s.precio}</div>`;
+
 adminServicios.innerHTML+=`<div class="producto">${s.nombre} $${s.precio}<div class="controls"><button onclick="editarServicio('${doc.id}','${s.nombre}',${s.precio})">✏️</button><button onclick="eliminarServicio('${doc.id}')">🗑</button></div></div>`;
 });
 });
@@ -194,7 +245,9 @@ adminProductos.innerHTML="";
 snap.forEach(doc=>{
 let p=doc.data();
 let c=carrito[doc.id]?.cantidad||0;
+
 listaProductos.innerHTML+=`<div class="producto">${p.nombre} - $${p.precio} (Stock:${p.stock})<div class="controls"><button onclick="cambiar('${doc.id}',-1,${p.precio},${p.stock})">-</button><span>${c}</span><button onclick="cambiar('${doc.id}',1,${p.precio},${p.stock})">+</button></div></div>`;
+
 adminProductos.innerHTML+=`<div class="producto">${p.nombre} $${p.precio}<div class="controls"><button onclick="editarProducto('${doc.id}','${p.nombre}',${p.precio},${p.stock})">✏️</button><button onclick="eliminarProducto('${doc.id}')">🗑</button></div></div>`;
 });
 });
@@ -210,13 +263,45 @@ listaUsuarios.innerHTML+=`<div>${u.usuario} - ${u.rol}</div>`;
 }
 
 /* LÓGICA */
-function toggleServicio(n,p){serviciosSel.push(n);total+=p;monto.value=total}
-function cambiar(id,d,p,s){if(!carrito[id])carrito[id]={cantidad:0,precio:p};let n=carrito[id].cantidad+d;if(n<0)n=0;if(n>s)return;total+=(n-carrito[id].cantidad)*p;carrito[id].cantidad=n;monto.value=total}
-async function guardar(){for(let id in carrito){await db.collection("productos").doc(id).update({stock:firebase.firestore.FieldValue.increment(-carrito[id].cantidad)})}await db.collection("ventas").add({cliente:cliente.value,total});alert("Guardado")}
+function toggleServicio(n,p){
+if(serviciosSel.includes(n)){serviciosSel=serviciosSel.filter(s=>s!==n);total-=p;}
+else{serviciosSel.push(n);total+=p;}
+monto.value=total;
+}
+
+function cambiar(id,d,p,s){
+if(!carrito[id])carrito[id]={cantidad:0,precio:p};
+let n=carrito[id].cantidad+d;
+if(n<0)n=0;
+if(n>s)return alert("Sin stock");
+total+=(n-carrito[id].cantidad)*p;
+carrito[id].cantidad=n;
+monto.value=total;
+}
+
+async function guardar(){
+for(let id in carrito){
+await db.collection("productos").doc(id).update({
+stock:firebase.firestore.FieldValue.increment(-carrito[id].cantidad)
+});
+}
+await db.collection("ventas").add({cliente:cliente.value,total});
+alert("Guardado");
+}
 
 /* UI */
-function mostrarSeccion(id){document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));document.getElementById(id).classList.add("activa")}
-function logout(){location.reload()}
+function mostrarSeccion(id,el){
+if(usuarioActivo.rol!=="admin"&&id!=="ventas")return;
+document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
+document.getElementById(id).classList.add("activa");
+document.querySelectorAll(".menu-item").forEach(m=>m.classList.remove("active"));
+el.classList.add("active");
+}
+
+function logout(){
+localStorage.removeItem("usuario");
+location.reload();
+}
 
 </script>
 
