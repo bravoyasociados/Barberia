@@ -11,7 +11,6 @@
 
 <style>
 
-/* BASE */
 body{
 margin:0;
 font-family:'Segoe UI',sans-serif;
@@ -280,7 +279,6 @@ font-size:26px;
 
 <!-- VENTAS -->
 <div id="ventas" class="seccion card activa">
-
 <h3>💰 Ventas</h3>
 
 <input id="cliente" placeholder="Nombre del cliente">
@@ -301,7 +299,6 @@ font-size:26px;
 <input id="monto" placeholder="Total a pagar">
 
 <button onclick="guardar()">Guardar Venta</button>
-
 </div>
 
 <!-- SERVICIOS -->
@@ -354,29 +351,18 @@ const db=firebase.firestore();
 let usuarioActivo={};
 let carrito={}, total=0, serviciosSel=[];
 
-/* SPLASH + AUTO LOGIN */
-setTimeout(async ()=>{
+/* SPLASH + AUTO LOGIN (CORRECTO) */
+setTimeout(()=>{
+
 splash.style.display="none";
 
 let data = localStorage.getItem("usuario");
 
 if(data){
-let usuario = JSON.parse(data);
-
-let snap = await db.collection("usuarios")
-.where("usuario","==",usuario.usuario)
-.where("password","==",usuario.password)
-.get();
-
-if(!snap.empty){
-iniciarApp(snap.docs[0].data());
-return;
+iniciarApp(JSON.parse(data));
 }else{
-localStorage.removeItem("usuario");
-}
-}
-
 pantallaLogin.classList.remove("hidden");
+}
 
 },1500);
 
@@ -410,7 +396,7 @@ document.querySelectorAll(".admin").forEach(el=>el.style.display="none");
 cargarTodo();
 }
 
-/* CARGAR */
+/* CARGAR DATOS */
 function cargarTodo(){
 
 db.collection("servicios").onSnapshot(snap=>{
@@ -518,6 +504,7 @@ document.getElementById(id).classList.add("activa");
 
 document.querySelectorAll(".menu-item").forEach(m=>m.classList.remove("active"));
 el.classList.add("active");
+
 }
 
 /* LOGOUT */
