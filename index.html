@@ -379,9 +379,73 @@ a.download = `corte_${tipo}.csv`;
 a.click();
 }
 
+function abrirPanel(){
+panelFechas.style.display = "block";
+}
+
+function cerrarPanel(){
+panelFechas.style.display = "none";
+}
+
+async function descargarRango(){
+
+let inicio = fechaInicio.value ? new Date(fechaInicio.value) : null;
+let fin = fechaFin.value ? new Date(fechaFin.value) : null;
+
+if(!inicio || !fin){
+alert("Selecciona fechas");
+return;
+}
+
+// incluir todo el día final
+fin.setHours(23,59,59);
+
+let snap = await db.collection("ventas").get();
+
+let tabla = {};
+let totalGlobal = 0;
+
+snap.forEach(doc=>{
+let v = doc.data();
+let f = v.fecha?.toDate?.() || new Date();
+
+if(f < inicio || f > fin) return;
+
+totalGlobal += Number(v.total);
+
+if(!tabla[v.barbero]){
+tabla[v.barbero] = {total:0, servicios:0};
+}
+
+tabla[v.barbero].total += Number(v.total);
+tabla[v.barbero].servicios += (v.servicios || []).length;
+
+});
+
+// CSV
+let csv = "Barbero,Total,Servicios\n";
+
+for(let b in tabla){
+csv += `${b},${tabla[b].total},${tabla[b].servicios}\n`;
+}
+
+csv += `TOTAL,${totalGlobal},\n`;
+
+// descargar
+let blob = new Blob([csv], { type: "text/csv" });
+let url = URL.createObjectURL(blob);
+
+let a = document.createElement("a");
+a.href = url;
+a.download = "reporte_rango.csv";
+a.click();
+
+cerrarPanel();
+}
+
 </script>
 
-<div id="excelBtn" onclick="exportarCorte()" 
+<div onclick="abrirPanel()" 
 style="
 position:fixed;
 left:20px;
@@ -399,5 +463,27 @@ z-index:999;
 📊
 </div>
 
+
+<div id="panelFechas" style="
+position:fixed;
+left:20px;
+bottom:100px;
+background:#1f1f1f;
+padding:15px;
+border-radius:15px;
+display:none;
+z-index:999;
+width:220px;
+">
+
+<h4>📅 Corte</h4>
+
+<input type="date" id="fechaInicio">
+<input type="date" id="fechaFin">
+
+<button onclick="descargarRango()">Exportar</button>
+<button onclick="cerrarPanel()">Cerrar</button>
+
+</div>
 </body>
 </html>
