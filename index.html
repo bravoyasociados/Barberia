@@ -312,7 +312,92 @@ localStorage.removeItem("usuario");
 location.reload();
 }
 
+async function exportarCorte(){
+
+let tipo = prompt("Escribe: dia o semana");
+
+if(!tipo) return;
+
+let ahora = new Date();
+let inicio, fin = new Date();
+
+if(tipo.toLowerCase() === "dia"){
+inicio = new Date();
+inicio.setHours(0,0,0,0);
+}
+
+else if(tipo.toLowerCase() === "semana"){
+inicio = new Date();
+inicio.setDate(ahora.getDate() - ahora.getDay());
+inicio.setHours(0,0,0,0);
+}
+
+else{
+alert("Opción no válida");
+return;
+}
+
+let snap = await db.collection("ventas").get();
+
+let tabla = {};
+let totalGlobal = 0;
+
+snap.forEach(doc=>{
+let v = doc.data();
+let f = v.fecha?.toDate?.() || new Date();
+
+// filtro por rango
+if(f < inicio || f > fin) return;
+
+totalGlobal += Number(v.total);
+
+if(!tabla[v.barbero]){
+tabla[v.barbero] = {total:0, servicios:0};
+}
+
+tabla[v.barbero].total += Number(v.total);
+tabla[v.barbero].servicios += (v.servicios || []).length;
+
+});
+
+// 🔥 crear CSV
+let csv = "Barbero,Total,Servicios\n";
+
+for(let b in tabla){
+csv += `${b},${tabla[b].total},${tabla[b].servicios}\n`;
+}
+
+csv += `TOTAL GENERAL,${totalGlobal},\n`;
+
+// descargar
+let blob = new Blob([csv], { type: "text/csv" });
+let url = URL.createObjectURL(blob);
+
+let a = document.createElement("a");
+a.href = url;
+a.download = `corte_${tipo}.csv`;
+a.click();
+}
+
 </script>
+
+<div id="excelBtn" onclick="exportarCorte()" 
+style="
+position:fixed;
+left:20px;
+bottom:20px;
+width:65px;
+height:65px;
+border-radius:50%;
+background:#00c853;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:26px;
+z-index:999;
+">
+📊
+</div>
 
 </body>
 </html>
