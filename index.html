@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>King’s Barber</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -40,11 +41,20 @@ input,select{width:100%;padding:10px;margin-top:10px;border-radius:10px;border:n
 /* BOTON */
 button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;background:#00c853;color:#000}
 
-.seccion{display:none}
-.seccion.activa{display:block}
+/* SERVICIOS */
+.servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.servicio{background:#1f1f1f;padding:10px;border-radius:10px;text-align:center;border:1px solid #333}
+.servicio.activo{background:#00c853;color:#000}
+
+/* PRODUCTOS */
+.producto{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px;border:1px solid #333}
+.controls{display:flex;justify-content:space-between;margin-top:5px}
 
 /* LOGOUT */
 .logout-btn{position:fixed;bottom:20px;right:20px;width:65px;height:65px;border-radius:50%;background:red;display:flex;align-items:center;justify-content:center;font-size:26px}
+
+.seccion{display:none}
+.seccion.activa{display:block}
 </style>
 </head>
 
@@ -82,36 +92,72 @@ button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;ba
 <div class="menu-item admin" onclick="mostrarSeccion('usuarios',this)">
 <div class="icono">👑</div><span>Usuarios</span>
 </div>
-
-<div class="menu-item admin" onclick="mostrarSeccion('reportes',this)">
-<div class="icono">📊</div><span>Reportes</span>
-</div>
 </div>
 
 <!-- VENTAS -->
 <div id="ventas" class="seccion card activa">
-<h3>Ventas</h3>
-<p>Área de ventas funcionando</p>
+
+<input id="cliente" placeholder="Cliente">
+
+<h4>Servicios</h4>
+<div id="listaServicios" class="servicios-grid"></div>
+
+<h4>Productos</h4>
+<div id="listaProductos"></div>
+
+<select id="metodoPago">
+<option value="">Método</option>
+<option value="efectivo">Efectivo</option>
+<option value="tarjeta">Tarjeta</option>
+<option value="transferencia">Transferencia</option>
+</select>
+
+<input id="monto" placeholder="Total">
+
+<button onclick="guardar()">Guardar</button>
+
 </div>
 
 <!-- SERVICIOS -->
 <div id="servicios" class="seccion card">
-<h3>Servicios</h3>
+
+<input id="nombreServicio" placeholder="Nombre">
+<input id="precioServicio" type="number">
+
+<button onclick="crearServicio()">Agregar</button>
+
+<div id="adminServicios"></div>
+
 </div>
 
 <!-- PRODUCTOS -->
 <div id="productos" class="seccion card">
-<h3>Productos</h3>
+
+<input id="nombreProd" placeholder="Nombre">
+<input id="precioProd" type="number">
+<input id="stockProd" type="number">
+
+<button onclick="crearProducto()">Agregar</button>
+
+<div id="adminProductos"></div>
+
 </div>
 
 <!-- USUARIOS -->
 <div id="usuarios" class="seccion card">
-<h3>Usuarios</h3>
-</div>
 
-<!-- REPORTES -->
-<div id="reportes" class="seccion card">
-<h3>Reportes</h3>
+<input id="nuevoUser" placeholder="Usuario">
+<input id="nuevoPass" placeholder="Contraseña">
+
+<select id="nuevoRol">
+<option value="barbero">Barbero</option>
+<option value="admin">Admin</option>
+</select>
+
+<button onclick="crearUsuario()">Crear</button>
+
+<div id="listaUsuarios"></div>
+
 </div>
 
 </div>
@@ -120,80 +166,258 @@ button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;ba
 
 <script>
 
-const firebaseConfig={
-apiKey:"AIzaSy...",
-authDomain:"barberia-pro-3ca72.firebaseapp.com",
-projectId:"barberia-pro-3ca72"
-};
-
+const firebaseConfig={apiKey:"AIzaSy...",authDomain:"barberia-pro-3ca72.firebaseapp.com",projectId:"barberia-pro-3ca72"};
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let usuarioActivo={};
+let usuarioActivo={},carrito={},serviciosSel=[],total=0;
 
 /* SESIÓN */
 window.onload=()=>{
 let u=localStorage.getItem("usuario");
-
-if(u){
-iniciarApp(JSON.parse(u));
-}else{
-pantallaLogin.classList.remove("hidden");
-}
+if(u) iniciarApp(JSON.parse(u));
+else pantallaLogin.classList.remove("hidden");
 };
 
 /* LOGIN */
 async function login(){
-
 let snap=await db.collection("usuarios")
 .where("usuario","==",user.value)
 .where("password","==",pass.value)
 .get();
 
-if(snap.empty){
-alert("Usuario incorrecto");
-return;
-}
+if(snap.empty)return alert("Error");
 
 let usuario=snap.docs[0].data();
-
 localStorage.setItem("usuario",JSON.stringify(usuario));
-
 iniciarApp(usuario);
 }
 
 /* INICIAR */
 function iniciarApp(usuario){
-
 usuarioActivo=usuario;
-
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
 
-// 🔥 SOLO ocultar botones (NO bloquear lógica)
 if(usuario.rol==="barbero"){
 document.querySelectorAll(".admin").forEach(e=>e.style.display="none");
 }
 
+cargarTodo();
 }
 
-/* 🔥 NAVEGACIÓN CORRECTA */
+/* CARGAR TODO */
+function cargarTodo(){
+
+db.collection("servicios").onSnapshot(snap=>{
+listaServicios.innerHTML="";
+adminServicios.innerHTML="";
+
+snap.forEach(doc=>{
+let s=doc.data();
+
+listaServicios.innerHTML+=`
+<div class="servicio ${serviciosSel.includes(s.nombre)?'activo':''}"
+onclick="toggleServicio('${s.nombre}',${s.precio})">
+${s.nombre}<br>$${s.precio}
+</div>`;
+
+adminServicios.innerHTML+=`
+<div class="producto">
+${s.nombre} $${s.precio}
+<div class="controls">
+<button onclick="editarServicio('${doc.id}','${s.nombre}',${s.precio})">✏️</button>
+<button onclick="eliminarServicio('${doc.id}')">🗑</button>
+</div>
+</div>`;
+});
+});
+
+db.collection("productos").onSnapshot(snap=>{
+listaProductos.innerHTML="";
+adminProductos.innerHTML="";
+
+snap.forEach(doc=>{
+let p=doc.data();
+let c=carrito[doc.id]?.cantidad||0;
+
+listaProductos.innerHTML+=`
+<div class="producto">
+${p.nombre} $${p.precio} (Stock:${p.stock})
+<div class="controls">
+<button onclick="cambiar('${doc.id}',-1,${p.precio},${p.stock})">-</button>
+<span>${c}</span>
+<button onclick="cambiar('${doc.id}',1,${p.precio},${p.stock})">+</button>
+</div>
+</div>`;
+
+adminProductos.innerHTML+=`
+<div class="producto">
+${p.nombre} $${p.precio}
+<div class="controls">
+<button onclick="editarProducto('${doc.id}','${p.nombre}',${p.precio},${p.stock})">✏️</button>
+<button onclick="eliminarProducto('${doc.id}')">🗑</button>
+</div>
+</div>`;
+});
+});
+
+db.collection("usuarios").onSnapshot(snap=>{
+listaUsuarios.innerHTML="";
+snap.forEach(doc=>{
+let u=doc.data();
+
+listaUsuarios.innerHTML+=`
+<div class="producto">
+${u.usuario} (${u.rol})
+<div class="controls">
+<button onclick="editarUsuario('${doc.id}','${u.usuario}','${u.password}','${u.rol}')">✏️</button>
+<button onclick="eliminarUsuario('${doc.id}')">🗑</button>
+</div>
+</div>`;
+});
+});
+
+}
+
+/* LÓGICA */
+function toggleServicio(n,p){
+if(serviciosSel.includes(n)){
+serviciosSel=serviciosSel.filter(s=>s!==n);
+total-=p;
+}else{
+serviciosSel.push(n);
+total+=p;
+}
+monto.value=total;
+cargarTodo();
+}
+
+function cambiar(id,d,p,s){
+if(!carrito[id])carrito[id]={cantidad:0,precio:p};
+
+let n=carrito[id].cantidad+d;
+if(n<0)n=0;
+if(n>s)return alert("Sin stock");
+
+total+=(n-carrito[id].cantidad)*p;
+carrito[id].cantidad=n;
+monto.value=total;
+
+cargarTodo();
+}
+
+/* CRUD */
+async function crearServicio(){
+await db.collection("servicios").add({
+nombre:nombreServicio.value,
+precio:Number(precioServicio.value)
+});
+nombreServicio.value="";precioServicio.value="";
+}
+
+async function crearProducto(){
+await db.collection("productos").add({
+nombre:nombreProd.value,
+precio:Number(precioProd.value),
+stock:Number(stockProd.value)
+});
+nombreProd.value="";precioProd.value="";stockProd.value="";
+}
+
+async function crearUsuario(){
+await db.collection("usuarios").add({
+usuario:nuevoUser.value,
+password:nuevoPass.value,
+rol:nuevoRol.value
+});
+nuevoUser.value="";nuevoPass.value="";
+}
+
+async function editarServicio(id,n,p){
+let nn=prompt("Nombre",n);
+let np=prompt("Precio",p);
+if(!nn||!np)return;
+await db.collection("servicios").doc(id).update({nombre:nn,precio:Number(np)});
+}
+
+async function eliminarServicio(id){
+if(confirm("Eliminar?"))await db.collection("servicios").doc(id).delete();
+}
+
+async function editarProducto(id,n,p,s){
+let nn=prompt("Nombre",n);
+let np=prompt("Precio",p);
+let ns=prompt("Stock",s);
+if(!nn||!np||!ns)return;
+await db.collection("productos").doc(id).update({
+nombre:nn,precio:Number(np),stock:Number(ns)
+});
+}
+
+async function eliminarProducto(id){
+if(confirm("Eliminar?"))await db.collection("productos").doc(id).delete();
+}
+
+async function editarUsuario(id,u,p,r){
+let nu=prompt("Usuario",u);
+let np=prompt("Pass",p);
+let nr=prompt("Rol",r);
+if(!nu||!np||!nr)return;
+await db.collection("usuarios").doc(id).update({
+usuario:nu,password:np,rol:nr
+});
+}
+
+async function eliminarUsuario(id){
+if(confirm("Eliminar usuario?"))await db.collection("usuarios").doc(id).delete();
+}
+
+/* GUARDAR */
+async function guardar(){
+
+for(let id in carrito){
+await db.collection("productos").doc(id).update({
+stock:firebase.firestore.FieldValue.increment(-carrito[id].cantidad)
+});
+}
+
+await db.collection("ventas").add({
+cliente:cliente.value,
+servicios:serviciosSel,
+productos:carrito,
+metodoPago:metodoPago.value,
+total,
+barbero:usuarioActivo.usuario,
+fecha:new Date()
+});
+
+alert("Venta guardada");
+
+// reset
+cliente.value="";
+metodoPago.value="";
+monto.value="";
+carrito={};
+serviciosSel=[];
+total=0;
+
+cargarTodo();
+}
+
+/* NAV */
 function mostrarSeccion(id,el){
 
-// solo restringe barbero
 if(usuarioActivo.rol==="barbero" && id!=="ventas"){
 alert("Solo acceso a ventas");
 return;
 }
 
-// cambiar vista
 document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
 document.getElementById(id).classList.add("activa");
 
-// menú activo
 document.querySelectorAll(".menu-item").forEach(m=>m.classList.remove("active"));
 if(el) el.classList.add("active");
-
 }
 
 /* LOGOUT */
