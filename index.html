@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>King’s Barber</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -22,23 +21,22 @@ body{margin:0;font-family:'Segoe UI';background:#111;color:#fff}
 .logo-login{width:180px;border-radius:50%;display:block;margin:40px auto;border:4px solid #00c853}
 
 .menu{display:flex;justify-content:space-around;margin-bottom:20px}
-.menu-item{text-align:center;cursor:pointer;position:relative}
+.menu-item{text-align:center;cursor:pointer}
 .menu-item span{font-size:12px;color:#aaa}
 .menu-item.active span{color:#00e676}
-.menu-item.active::after{content:"";position:absolute;bottom:-5px;left:20%;width:60%;height:3px;background:#00c853}
 
 .icono{width:70px;height:70px;border-radius:50%;background:#1f1f1f;display:flex;align-items:center;justify-content:center;font-size:28px}
 
-.card{background:#1f1f1f;border-radius:15px;padding:15px}
+.card{background:#1f1f1f;border-radius:15px;padding:15px;margin-top:10px}
 input,select{width:100%;padding:10px;margin-top:10px;border-radius:10px;border:none;background:#2a2a2a;color:#fff}
 button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:10px;background:#00c853;color:#000}
 
 .servicios-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.servicio{background:#1f1f1f;padding:10px;border-radius:10px;text-align:center;border:1px solid #333}
+.servicio{background:#1f1f1f;padding:10px;border-radius:10px;text-align:center}
 .servicio.activo{background:#00c853;color:#000}
 
-.producto{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px;border:1px solid #333}
-.controls{display:flex;justify-content:space-between;margin-top:5px}
+.producto{background:#1f1f1f;padding:10px;border-radius:10px;margin-top:10px}
+.controls{display:flex;justify-content:space-between}
 
 table{width:100%;margin-top:10px;border-collapse:collapse}
 td,th{border:1px solid #444;padding:8px;text-align:center}
@@ -68,35 +66,70 @@ td,th{border:1px solid #444;padding:8px;text-align:center}
 
 <div class="menu">
 <div class="menu-item active" onclick="mostrarSeccion('ventas',this)"><div class="icono">💰</div><span>Ventas</span></div>
+<div class="menu-item admin" onclick="mostrarSeccion('servicios',this)"><div class="icono">✂️</div><span>Servicios</span></div>
+<div class="menu-item admin" onclick="mostrarSeccion('productos',this)"><div class="icono">📦</div><span>Productos</span></div>
 <div class="menu-item admin" onclick="mostrarSeccion('usuarios',this)"><div class="icono">👑</div><span>Usuarios</span></div>
 <div class="menu-item admin" onclick="mostrarSeccion('reportes',this)"><div class="icono">📊</div><span>Reportes</span></div>
 </div>
 
+<!-- VENTAS -->
+<div id="ventas" class="seccion card activa">
+<input id="cliente" placeholder="Cliente">
+<h4>Servicios</h4>
+<div id="listaServicios" class="servicios-grid"></div>
+
+<h4>Productos</h4>
+<div id="listaProductos"></div>
+
+<select id="metodoPago">
+<option value="">Método</option>
+<option value="efectivo">Efectivo</option>
+<option value="tarjeta">Tarjeta</option>
+<option value="transferencia">Transferencia</option>
+</select>
+
+<input id="monto" placeholder="Total">
+<button onclick="guardar()">Guardar</button>
+</div>
+
+<!-- SERVICIOS -->
+<div id="servicios" class="seccion card">
+<input id="nombreServicio" placeholder="Nombre">
+<input id="precioServicio" type="number">
+<button onclick="crearServicio()">Agregar</button>
+<div id="adminServicios"></div>
+</div>
+
+<!-- PRODUCTOS -->
+<div id="productos" class="seccion card">
+<input id="nombreProd" placeholder="Nombre">
+<input id="precioProd" type="number">
+<input id="stockProd" type="number">
+<button onclick="crearProducto()">Agregar</button>
+<div id="adminProductos"></div>
+</div>
+
 <!-- USUARIOS -->
 <div id="usuarios" class="seccion card">
-
 <input id="nuevoUser" placeholder="Usuario">
 <input id="nuevoPass" placeholder="Contraseña">
-
 <select id="nuevoRol">
 <option value="barbero">Barbero</option>
 <option value="admin">Admin</option>
 </select>
-
 <input id="comisionInput" type="number" placeholder="Comisión por servicio">
-
 <button onclick="crearUsuario()">Crear</button>
-
 <div id="listaUsuarios"></div>
-
 </div>
 
 <!-- REPORTES -->
 <div id="reportes" class="seccion card">
 
-<h3>📊 Reportes + Comisiones</h3>
+<input type="date" id="fechaInicio">
+<input type="date" id="fechaFin">
 
 <button onclick="generarReporte()">Generar</button>
+<button onclick="exportarExcel()">Exportar Excel</button>
 
 <div id="totalVentas">$0</div>
 
@@ -124,7 +157,7 @@ const firebaseConfig={apiKey:"AIzaSy...",authDomain:"barberia-pro-3ca72.firebase
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let usuarioActivo={};
+let usuarioActivo={},carrito={},serviciosSel=[],total=0;
 
 /* LOGIN */
 window.onload=()=>{
@@ -149,48 +182,64 @@ function iniciarApp(usuario){
 usuarioActivo=usuario;
 pantallaLogin.style.display="none";
 app.classList.remove("hidden");
+
+if(usuario.rol==="barbero"){
+document.querySelectorAll(".admin").forEach(e=>e.style.display="none");
 }
 
-/* CREAR USUARIO */
-async function crearUsuario(){
-await db.collection("usuarios").add({
-usuario:nuevoUser.value,
-password:nuevoPass.value,
-rol:nuevoRol.value,
-comision:Number(comisionInput.value)
+cargarTodo();
+}
+
+/* CARGA */
+function cargarTodo(){
+
+db.collection("servicios").onSnapshot(snap=>{
+listaServicios.innerHTML="";
+adminServicios.innerHTML="";
+snap.forEach(doc=>{
+let s=doc.data();
+listaServicios.innerHTML+=`<div class="servicio" onclick="toggleServicio('${s.nombre}',${s.precio})">${s.nombre}</div>`;
+adminServicios.innerHTML+=`${s.nombre} $${s.precio}<br>`;
 });
+});
+
 }
 
-/* REPORTES + COMISIONES */
+/* REPORTE */
 async function generarReporte(){
 
-let snap=await db.collection("ventas").get();
-let usuariosSnap=await db.collection("usuarios").get();
+let inicio = fechaInicio.value ? new Date(fechaInicio.value) : null;
+let fin = fechaFin.value ? new Date(fechaFin.value) : null;
+if(fin) fin.setHours(23,59,59);
 
-let comisionesMap={};
+let snap = await db.collection("ventas").get();
+let usuariosSnap = await db.collection("usuarios").get();
 
+let comMap={};
 usuariosSnap.forEach(doc=>{
 let u=doc.data();
-comisionesMap[u.usuario]=u.comision||0;
+comMap[u.usuario]=u.comision||0;
 });
 
-let tabla={};
+let tabla={},totalGlobal=0;
 
 snap.forEach(doc=>{
 let v=doc.data();
+let f=v.fecha?.toDate?.()||new Date();
 
-if(!tabla[v.barbero]){
-tabla[v.barbero]={total:0,servicios:0,comision:0};
-}
+if(inicio && f<inicio)return;
+if(fin && f>fin)return;
+
+totalGlobal+=Number(v.total);
+
+if(!tabla[v.barbero])tabla[v.barbero]={total:0,servicios:0,comision:0};
 
 tabla[v.barbero].total+=Number(v.total);
 
 let servicios=(v.servicios||[]).length;
 tabla[v.barbero].servicios+=servicios;
 
-let comBase=comisionesMap[v.barbero]||0;
-tabla[v.barbero].comision+=servicios*comBase;
-
+tabla[v.barbero].comision+=servicios*(comMap[v.barbero]||0);
 });
 
 let tbody=document.querySelector("#tablaDinamica tbody");
@@ -206,6 +255,27 @@ tbody.innerHTML+=`
 </tr>`;
 }
 
+totalVentas.innerHTML="$"+totalGlobal;
+window.reporteActual=tabla;
+}
+
+/* EXCEL */
+function exportarExcel(){
+
+if(!window.reporteActual)return alert("Genera reporte");
+
+let csv="Barbero,Total,Servicios,Comision\n";
+
+for(let b in reporteActual){
+let r=reporteActual[b];
+csv+=`${b},${r.total},${r.servicios},${r.comision}\n`;
+}
+
+let blob=new Blob([csv]);
+let a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="reporte.csv";
+a.click();
 }
 
 /* NAV */
@@ -220,9 +290,10 @@ document.querySelectorAll(".seccion").forEach(s=>s.classList.remove("activa"));
 document.getElementById(id).classList.add("activa");
 
 document.querySelectorAll(".menu-item").forEach(m=>m.classList.remove("active"));
-if(el) el.classList.add("active");
+el.classList.add("active");
 }
 
+/* LOGOUT */
 function logout(){
 localStorage.removeItem("usuario");
 location.reload();
